@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# build outputs
+build/
+.kotlin
+
+# Pleos 개발자 문서 (pleos-only 출처, 외부 저장소에 올리지 않음)
+/AGENTS.md
+/CLAUDE.md
+/docs/
+/raw/
+/RESOURCES.md
