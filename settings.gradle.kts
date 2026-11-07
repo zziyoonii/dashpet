@@ -27,6 +27,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "DashPet"
-include(":mobile")
-include(":automotive")
-include(":shared")
+include(":app")
+include(":signal")
+include(":engine")
+include(":pet")
