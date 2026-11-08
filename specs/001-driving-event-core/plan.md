@@ -80,14 +80,17 @@ signal/src/main/java/com/example/dashpet/signal/
     └── DemoScenarios.kt         # demo-commute (개발 명세서 9장)
 
 signal/src/test/java/com/example/dashpet/signal/
-├── ScenarioExpandTest.kt
+├── RawSignalTest.kt
+├── scenario/ScenarioExpandTest.kt
 └── MockSignalSourceTest.kt
 
 engine/src/main/java/com/example/dashpet/engine/
 ├── EngineConfig.kt              # 모든 임계값, 간격, 지속 시간, 가중치
 ├── DrivingEvent.kt              # EventType, Direction4, DrivingEvent
 ├── Kinematics.kt                # 평활화, 앞뒤/옆 가속도 계산, 샘플 버림
-├── EventDetector.kt             # 가속도 이벤트, 경고, 차선 변경 판정과 재발 간격
+├── AccelEventDetector.kt        # 급가속, 급제동, 급커브 판정과 재발 간격 (US1)
+├── WarningEventDetector.kt      # 차선 이탈, 충돌 위험 판정 (US2)
+├── LaneChangeEventDetector.kt   # 좋은/깜빡이 없는 차선 변경 평가 (US4)
 ├── TripTracker.kt               # 주행 시작/종료 수명주기, Trip 기록
 ├── ScoreKeeper.kt               # 가감점, 가점 상한, 마지막에만 0~100 자름
 ├── Mood.kt                      # Mood, PetState
@@ -98,13 +101,20 @@ engine/src/main/java/com/example/dashpet/engine/
 └── DrivingEngine.kt             # Flow 연결 래퍼 (StateFlow/SharedFlow)
 
 engine/src/test/java/com/example/dashpet/engine/
+├── Fixtures.kt                  # 시나리오 재생, 이벤트 조회 헬퍼
 ├── KinematicsTest.kt
-├── EventDetectorTest.kt
+├── AccelEventDetectorTest.kt
+├── WarningEventDetectorTest.kt
+├── LaneChangeEventDetectorTest.kt
 ├── MoodMachineTest.kt
 ├── MotionGateTest.kt
 ├── ScoreKeeperTest.kt
 ├── TripTrackerTest.kt
-├── EngineCoreTest.kt
+├── EngineCoreAccelTest.kt       # US1
+├── EngineCoreMoodTest.kt        # US2
+├── EngineCoreMotionTest.kt      # US3
+├── EngineCoreTripTest.kt        # US4
+├── EngineCoreTurnSignalTest.kt  # US6
 ├── DemoScenarioTest.kt          # SC-001, SC-002
 └── DrivingEngineTest.kt         # coroutines-test
 ```

@@ -24,11 +24,11 @@
 |-|-|-|-|
 | 1 | 데모 출근 시나리오를 재생하면 이벤트가 `TRIP_START`, `SEATBELT_OK`, `HARD_CORNER`, `GOOD_LANE_CHANGE`, `LANE_DEPARTURE`, `HARD_BRAKE`, `TRIP_END` 순서로 나오고 점수가 94 | `DemoScenarioTest` | SC-001, US5 |
 | 2 | 같은 시나리오를 100번 돌려도 이벤트, 감정 전환, 점수가 모두 같다 | `DemoScenarioTest` | SC-002 |
-| 3 | 완만한 가속(0→50km/h, 8초)과 15km/h 미만의 방향 변화는 이벤트가 없다 | `EventDetectorTest` | SC-004, US1 |
-| 4 | 제한 상태 `NONE`, `ACTIVE`, `UNKNOWN` 에서 같은 이벤트를 넣었을 때 등급이 `FULL`, `STATIC`, `STATIC` | `MotionGateTest`, `EngineCoreTest` | SC-003, US3 |
-| 5 | 풀 모션 진행 중 제한이 걸리면 그 다음 출력부터 `STATIC` | `EngineCoreTest` | FR-017 |
+| 3 | 완만한 가속(0→50km/h, 8초)과 15km/h 미만의 방향 변화는 이벤트가 없다 | `AccelEventDetectorTest` | SC-004, US1 |
+| 4 | 제한 상태 `NONE`, `ACTIVE`, `UNKNOWN` 에서 같은 이벤트를 넣었을 때 등급이 `FULL`, `STATIC`, `STATIC` | `MotionGateTest`, `EngineCoreMotionTest` | SC-003, US3 |
+| 5 | 풀 모션 진행 중 제한이 걸리면 그 다음 출력부터 `STATIC` | `EngineCoreMotionTest` | FR-017 |
 | 6 | 깜짝 중 급제동은 버려지고, 어지러움 중 충돌 위험은 즉시 깜짝으로 전환 | `MoodMachineTest` | US2 |
-| 7 | 깜빡이 없는 차선 변경은 감정이 안 바뀌고 −3점과 기록만 남는다 | `EngineCoreTest`, `ScoreKeeperTest` | US4 |
+| 7 | 깜빡이 없는 차선 변경은 감정이 안 바뀌고 −3점과 기록만 남는다 | `EngineCoreTripTest`, `ScoreKeeperTest` | US4 |
 | 8 | 점수 가점 상한(+5)과 마지막에만 0~100 으로 자르기 | `ScoreKeeperTest` | FR-014 |
 | 9 | 속도 정보가 없거나 간격이 2초를 넘는 샘플은 버려진다. 방위 359°→1° 는 +2° | `KinematicsTest` | Edge Cases |
 | 10 | 주행 중에 앱이 켜지면 출발 이벤트 없이 주행이 시작되고, 주차 상태여도 속도가 0 이 아니면 도착이 아니다 | `TripTrackerTest` | FR-024, Edge Cases |
