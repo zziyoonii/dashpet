@@ -18,7 +18,8 @@ android {
 }
 
 dependencies {
-    implementation(libs.kotlinx.coroutines.core)
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.pleos.vehicle) // Pleos SDK 의존성은 :signal 에만 둔다
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
