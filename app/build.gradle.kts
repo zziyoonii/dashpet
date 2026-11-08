@@ -6,13 +6,13 @@ plugins {
 android {
     namespace = "com.example.dashpet"
     compileSdk {
-        version = release(37)
+        version = release(34)
     }
 
     defaultConfig {
         applicationId = "com.example.dashpet"
         minSdk = 29
-        targetSdk = 37
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
     }
