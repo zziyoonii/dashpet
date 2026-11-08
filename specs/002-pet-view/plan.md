@@ -93,16 +93,33 @@ pet/src/main/java/com/example/dashpet/pet/
 ├── PetPose.kt                   # 정적 포즈 계산 (순수 Kotlin)
 ├── MotionPolicy.kt              # 프레임 루프 실행 조건, 모션 줄이기 보정
 ├── PetController.kt             # PetOutput, DrivingEvent → 물리 명령, 정적/풀 전환
-├── PetPainter.kt                # DrawScope 그리기 (몸, 눈, 눈썹, 입, 효과, 유리)
-└── PetView.kt                   # Composable (프레임 루프, 생명주기, 정적/풀 분기), 엔진 연결 도우미
+├── PetPainter.kt                # 아래 페인터를 순서대로 호출하는 조정 함수
+├── BackgroundPainter.kt         # 배경, 격자, 바닥, 패널, 벽 접촉 빛
+├── BodyPainter.kt               # 몸 경로, 그라데이션, 유리 번짐, 눌린 자국, 속도선
+├── FacePainter.kt               # 눈(헤드라이트), 눈썹(LED), 입, 볼터치, 윙크
+├── EffectsPainter.kt            # 파티클, 유리 반사광과 자국
+├── StaticPainter.kt             # 정적 포즈 그리기 (움직임 없음)
+├── PetPreviews.kt               # 감정, 방향, 정적, 윙크, 배경 감정 @Preview
+└── PetView.kt                   # Composable (프레임 루프, 생명주기, 정적/풀 분기), 이름 표시
 
 pet/src/test/java/com/example/dashpet/pet/
 ├── SoftBodyTest.kt
 ├── PetPhysicsTest.kt
 ├── ParticlesTest.kt
 ├── PetPoseTest.kt
+├── PetPoseAmbientTest.kt
+├── ParticlesAmbientTest.kt
 ├── MotionPolicyTest.kt
-└── PetControllerTest.kt
+├── PetPaletteTest.kt
+├── PetAppearanceTest.kt
+├── PetPhysicsConfigTest.kt
+├── PetControllerFullTest.kt       # US1
+├── PetControllerEngineTest.kt     # US1 (collectFrom)
+├── PetControllerStaticTest.kt     # US2
+├── PetControllerTransitionTest.kt # US3
+├── PetControllerWinkTest.kt       # US4
+├── PetControllerAppearanceTest.kt # US5
+└── PetControllerAmbientTest.kt    # US7
 
 app/src/main/java/com/example/dashpet/ui/
 ├── screens/HomeScreen.kt        # PetView + 데모 컨트롤 (placeholder 교체)
