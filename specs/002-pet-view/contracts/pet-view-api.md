@@ -35,7 +35,12 @@ class PetController(
 
     fun setAmbient(ambient: AmbientMood?)
     fun setReducedMotion(reduced: Boolean)
-    fun setViewport(widthPx: Float, heightPx: Float)
+
+    /** 외형. 성격이 기쁨 점프 속도(활발 820, 그 외 650)와 재점프(620/480)를 정한다. 값이 같으면 아무것도 하지 않는다. */
+    fun setAppearance(appearance: PetAppearance)
+
+    /** 표시 영역 크기. 단위는 시안의 CSS px 와 같은 논리 단위(dp)다. `PetView` 가 픽셀을 밀도로 나눠 넘기고 그릴 때 밀도 배율을 적용한다. */
+    fun setViewport(widthDp: Float, heightDp: Float)
 
     /** 물리 시계를 dt 초 진행한다. 풀 모션에서만 동작하고 정적에서는 아무것도 하지 않는다. dt 는 (0, 1/30] 로 자른다. */
     fun step(dtSec: Float)

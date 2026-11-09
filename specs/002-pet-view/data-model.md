@@ -55,7 +55,7 @@
 | `motion` | `MotionMode` |
 | `turnSignal` | `TurnState` |
 | `appearance` | `PetAppearance` |
-| `viewportPx` | 폭, 높이(px). 0 이하이면 그리지 않는다 |
+| `viewportWidth`, `viewportHeight` | 폭, 높이(시안의 CSS px 와 같은 논리 단위, dp). 0 이하이면 그리지 않는다 |
 | `reducedMotion` | 모션 줄이기 여부 |
 | `frame` | 풀 모션에서 프레임마다 증가하는 번호(다시 그리기 트리거). 정적에서는 변하지 않는다 |
 | `physics` | 풀 모션일 때의 `PetPhysicsState` 스냅샷. 정적에서는 없음 |
