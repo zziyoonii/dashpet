@@ -18,6 +18,7 @@
 | `VehicleWarning` | `type: WarningType`, `active: Boolean` | - |
 | `LaneChange` | `direction: Side` | - |
 | `Restriction` | `state: RestrictionState` | - |
+| `Tick` | (값 없음) | 시각만 가진다. 엔진은 이벤트 없이 시간만 진행한다(`advanceTo` 와 같음). 소스가 주기적으로 방출한다(002 R12) |
 
 열거형:
 - `TurnState`: `OFF`, `LEFT`, `RIGHT` (조사 결과 공개 API 가 세 값뿐이라 `HAZARD` 는 두지 않는다)

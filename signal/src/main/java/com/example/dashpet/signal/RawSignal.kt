@@ -53,3 +53,9 @@ data class VehicleWarning(
 data class LaneChange(override val timestampMs: Long, val direction: Side) : RawSignal
 
 data class Restriction(override val timestampMs: Long, val state: RestrictionState) : RawSignal
+
+/**
+ * 값 없이 "시간이 여기까지 왔다"만 알리는 신호. 신호가 없는 구간에서도 엔진이 시간을 진행해
+ * 지속 시간이 있는 감정을 만료시킬 수 있게 한다. 소스는 자기 시간 기준으로 주기적으로 방출한다.
+ */
+data class Tick(override val timestampMs: Long) : RawSignal
