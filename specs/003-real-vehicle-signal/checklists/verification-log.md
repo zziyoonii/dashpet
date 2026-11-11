@@ -35,8 +35,8 @@
 |-|-|-|-|-|
 | 1 | 앱을 열고 제한 값이 오기 전까지 본다 | 정적, 제한 `알 수 없음` 또는 첫 값 | US1-3, SC-002 | **확인함(2026-11-10).** 앱 시작 직후 `logcat -s CarSignal` 에 `link=CONNECTING` → `CONNECTED` → `restriction=ACTIVE bits=0x50` 이 6 ms 안에 순서대로 찍힌다. 값이 오기 전 화면은 정적(스크린샷: 모션 등급 "정적", 평평한 몸) |
 | 2 | Virtual Console 에서 기어 P → D → P | 주차 여부가 바뀌고, 플랫폼 제한에 따라 1초 안에 정적 ↔ 풀 모션 | US1-1,2, SC-001, SC-003 | **제한 부분 확인함.** 기어 P(콘솔 `PUT /vehicle/gear?gear=Park`) → 플랫폼 `UXR: DO: false UxR: 0`, 앱 `restriction=NONE bits=0x0`, 화면 "풀 모션"(눈, 눈썹, 미소). D → `DO: true UxR: 80`, 앱 `ACTIVE bits=0x50`, 화면 "정적". P/D 10회 전환 모두 로그 반영까지 0.22초 이내(최대, 폴링 포함, 중앙값 0.05초) → SC-001 통과. 기어(주차 여부): P → `parked=true gear=4`, R → `parked=false gear=2`, D → `parked=false gear=8`, 초기 읽기도 앱 시작 직후 `gear=8` 로 한 번 전달됨(2026-11-10). |
-| 3 | 기어 R, N | 둘 다 `주차 아님`, 4가지 모두 확인 | SC-003 | **통과(2026-11-10).** P `parked=true gear=4`, R `parked=false gear=2`, N(P 에서 전환) `parked=false gear=1`, D `parked=false gear=8`. 같은 주차 여부(R, N, D 사이)는 중복 제거로 로그가 남지 않는다. 4가지 모두 기대값 → SC-003 |
-| 4 | 속도를 바꾼다 | 진단 속도 갱신, 속도 0 이고 P 여도 플랫폼 제한이 있으면 정적 | US2-2, SC-004 | **통과(2026-11-10).** 콘솔 `PUT /vehicle/controls?speed=40` → 앱 `speedMps=11.111112`(40 km/h), `speed=72` → `20.0`, `speed=0` → `moving=false`. 속도 0 + D 에서도 플랫폼 제한은 `0x50` 이라 앱도 `ACTIVE`(속도가 제한을 풀지 않음), P 로 바꾸면 `NONE` → SC-004. 진단 패널(US4)이 생기면 숫자도 화면에서 재확인 |
+| 3 | 기어 R, N | 둘 다 `주차 아님`, 4가지 모두 확인 | SC-003 | **통과(2026-11-10).** P `parked=true gear=4`, R `parked=false gear=2`, N(P 에서 전환) `parked=false gear=1`, D `parked=false gear=8`. 같은 주차 여부(R, N, D 사이)는 중복 제거로 로그가 남지 않는다. 4가지 모두 기대값 → SC-003. **화면 재확인(2026-11-11):** R 은 화면으로 못 봤다. 플랫폼이 R 단에서 후방 카메라 앱(`ai.umos.car.evs/.CarEvsCameraPreviewActivity`)을 앞에 띄워 이 앱이 가려지고 `link=IDLE` 로 수신이 정리된다(의도한 동작). 가려지기 직전 로그는 `parked=false gear=2`, `restriction=ACTIVE bits=0x50`. 플랫폼 동작이라 앱에서 바꿀 수 없다 |
+| 4 | 속도를 바꾼다 | 진단 속도 갱신, 속도 0 이고 P 여도 플랫폼 제한이 있으면 정적 | US2-2, SC-004 | **통과(2026-11-10).** 콘솔 `PUT /vehicle/controls?speed=40` → 앱 `speedMps=11.111112`(40 km/h), `speed=72` → `20.0`, `speed=0` → `moving=false`. 속도 0 + D 에서도 플랫폼 제한은 `0x50` 이라 앱도 `ACTIVE`(속도가 제한을 풀지 않음), P 로 바꾸면 `NONE` → SC-004. **화면 재확인(2026-11-11):** D 에서 `speed=72` → 진단 패널에 `속도: 72.0 km/h (20.0 m/s)`, `연결: 연결됨`, `제한: 있음 (0x50)`, `기어: 주차 아님`, 모션 등급 "정적", 펫 정적 포즈 |
 | 5 | `dumpsys car_service --services CarUxRestrictionsManagerService` 와 대조 | `UXR`, `DO` 가 진단과 일치 | US1 | **확인함.** `dumpsys car_service --services CarUxRestrictionsManagerService` 의 `UXR: DO: true UxR: 80` ↔ 앱 `bits=0x50`, `DO: false UxR: 0` ↔ `bits=0x0` |
 | 6 | `CAR_SPEED` 회수 후 재시작 | 앱 정상, 속도 `권한 거부`, 기어와 제한은 동작 | US3-1, SC-005 | **통과(2026-11-10).** 권한을 회수하고 시작하면 `availability SPEED=NO_PERMISSION`, 런타임 다이얼로그에서 "허용 안함"을 눌러도 소스만 재시작되고 `SPEED=NO_PERMISSION` 유지, 앱 종료 없음(`FATAL EXCEPTION` 0건). 이후 콘솔에서 기어 P/D 를 바꾸면 `parked=true/false`, `restriction=NONE/ACTIVE` 가 계속 전달됨. "허용"을 누르면 소스가 재시작되고 `SPEED=OK` |
 | 7 | 서비스 끊김 | 제한 `알 수 없음` → 정적, 복구 시 재읽기 | US3-2 | **환경에서 확인 불가.** 시스템 서비스(`com.android.car.updatable`)를 강제 종료하면 에뮬레이터 전체가 불안정해질 수 있어 시도하지 않았다. 가짜 게이트웨이 테스트로 대체: `Lost` → `Restriction(UNKNOWN)`, 복구 시 재읽기, 실행 중 게이트웨이 실패 시 제한 `UNKNOWN` 으로 되돌림(`CarSignalSourceTest`) |
@@ -45,6 +45,21 @@
 | 10 | 20회 열고 닫는다 | 클라이언트 수 누적 없음 | US5-3, SC-007 | **통과(2026-11-10).** 전체 화면 Settings 로 덮고 앱으로 돌아오기를 20회 반복: `link=IDLE` 20, `CONNECTING` 20, `CONNECTED` 20, `dumpsys car_service --services CarUxRestrictionsManagerService` 의 `callbacks:` 가 반복 전 13 → 반복 후 13(누적 없음), `FATAL EXCEPTION` 0 → SC-007 |
 | 11 | 데모로 전환해 재생, 다시 실차로 | 데모 정상, 돌아온 뒤 데모 신호 없음, 10회 반복 | US4-1,2, SC-008, SC-009 | **통과(2026-11-10).** "데모" 칩 → `mode=DEMO`, 실차 소스 `link=IDLE`, 재생/제한 버튼이 나타남. 재생 0:10 지점에서 "감정: 기쁨"(초록, 정적). "실차" 칩 → `mode=VEHICLE`, `link=CONNECTING → CONNECTED`, 실제 값 `parked=false gear=8`, `restriction=ACTIVE bits=0x50` 을 다시 읽고 화면은 "감정: 편안, 모션 등급: 정적"(데모 상태가 남지 않음). 칩을 눌러 10회 번갈아 전환: `mode=DEMO` 10, `mode=VEHICLE` 10, `link=CONNECTED` 10, `link=IDLE` 10, `FATAL EXCEPTION` 0 → SC-009 |
 | 12 | 실차 모드에서 수동 제한 토글 | 보이지 않거나 비활성 | FR-016 | **통과(2026-11-10).** 실차 모드 화면에는 모드 칩과 진단만 있고 재생, "제한 없음/있음/알 수 없음" 버튼이 없다. 데모 모드에서만 나타난다. (단위 테스트로도 실차 모드의 `setRestriction`, `togglePlay` 무시를 확인) |
+
+## 재확인 (2026-11-11, 구현 후 에뮬레이터 새로 부팅)
+
+Cold boot 후 `installDebug` → `pm grant --user 10 ... CAR_SPEED` → 실행. 하트비트는 브라우저 탭과 CLI 로 보냈다.
+
+| 항목 | 결과 |
+|-|-|
+| 시작 | `link=CONNECTING → CONNECTED`, `SPEED/GEAR/RESTRICTION=OK`, `parked=true gear=4`, `restriction=NONE bits=0x0` |
+| 기어 P, D, N, P | `gear=4/8/1/4` → `parked=true/false/false/true`, 제한 `NONE/ACTIVE(0x50)/ACTIVE/NONE`. D 반영 0.01초 |
+| 기어 R | 로그 없음(D 와 주차 여부, 제한이 같아 중복 제거). 화면은 후방 카메라가 가림. 별도 실행에서 `gear=2` 로 확인 |
+| 속도 40, 72, 0 (D) | `11.111112` m/s, `20.0` m/s(화면), `moving=false`. 속도 0 + D 에서도 제한 유지 |
+| 정적(D) 부하 | 10초간 `Total frames rendered: 0`, CPU 0.5% (기준 5% 미만) |
+| 권한 회수 후 재시작 | `SPEED=NO_PERMISSION`, 기어와 제한은 계속 동작. 재부여 후 `SPEED=OK` |
+| 크래시 | `logcat -b crash` 비어 있음, 프로세스 유지 |
+| `dumpsys` 대조 | `DO` 값이 앱 제한과 같은 방향으로 움직임. 이번에는 `UXR` 비트를 직접 대조하지 않음(앞의 5번 행에서 일치 확인) |
 
 ## 미결 항목 (`research.md` R9)
 
