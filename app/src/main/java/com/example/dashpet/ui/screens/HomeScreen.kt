@@ -116,6 +116,7 @@ fun HomeScreen() {
             onMode = viewModel::setMode,
             voiceEnabled = voiceEnabled,
             onVoiceEnabled = { viewModel.setVoiceEnabled(it) },
+            onDebugSpeak = viewModel::debugSpeak,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .safeDrawingPadding()

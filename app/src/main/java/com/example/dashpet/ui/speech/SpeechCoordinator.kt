@@ -1,6 +1,7 @@
 package com.example.dashpet.ui.speech
 
 import com.example.dashpet.engine.DrivingEvent
+import com.example.dashpet.engine.EventType
 import com.example.dashpet.engine.MotionTier
 import com.example.dashpet.engine.PetOutput
 import com.example.dashpet.engine.speech.SpeechCommand
@@ -62,6 +63,16 @@ class SpeechCoordinator(
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             output.collect { apply(director.onOutput(it.tier, clock())) }
         }
+    }
+
+    /**
+     * 확인용(디버그 전용): 엔진을 거치지 않고 이벤트 하나를 규칙에 넣는다. 말풍선과 제한 중 규칙은 실제 이벤트와 같다
+     * (현재 `output.tier` 를 그대로 쓴다). 화면에 보이지 않으면 아무것도 하지 않는다.
+     */
+    fun debugSpeak(type: EventType) {
+        if (!foreground) return
+        val now = clock()
+        apply(director.onEvent(DrivingEvent(type, now), output.value.tier, now))
     }
 
     /** 화면에 보이기 시작. 음성 출력을 새로 만든다(이미 있으면 아무것도 하지 않는다). */
@@ -141,7 +152,7 @@ class SpeechCoordinator(
         }
         val out = speech
         if (settings.voiceEnabled && out != null) {
-            log("speak event=$type bubble=${cmd.showBubble}")
+            log("speak event=$type bubble=${cmd.showBubble} tier=${output.value.tier}")
             out.speak(cmd.id, cmd.spokenText)
         } else {
             log("silent event=$type reason=${if (out == null) "no-output" else "voice-off"}")

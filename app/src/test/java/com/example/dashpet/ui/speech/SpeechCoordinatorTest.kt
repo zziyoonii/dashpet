@@ -74,6 +74,26 @@ class SpeechCoordinatorTest {
 
     private fun TestScope.rig(settings: VoiceSettings = MemoryVoiceSettings(true), noop: Boolean = false) = Rig(this, settings, noop)
 
+    @Test fun debugSpeakFollowsCurrentTier() = runTest {
+        val r = rig()
+        r.coordinator.debugSpeak(EventType.SEATBELT_OK)
+        runCurrent()
+        assertEquals("안전벨트를 확인했어요.", r.coordinator.bubble.value?.text) // FULL: 말풍선 + 음성
+        r.tier(MotionTier.STATIC)
+        assertNull(r.coordinator.bubble.value)
+        r.coordinator.debugSpeak(EventType.TRIP_START)
+        runCurrent()
+        assertNull(r.coordinator.bubble.value) // 제한 중에는 글자 없음
+    }
+
+    @Test fun debugSpeakIgnoredInBackground() = runTest {
+        val r = rig()
+        r.coordinator.onBackground()
+        r.coordinator.debugSpeak(EventType.SEATBELT_OK)
+        runCurrent()
+        assertNull(r.coordinator.bubble.value)
+    }
+
     @Test fun fullShowsBubbleAndSpeaksSameText() = runTest {
         val r = rig()
         r.event(EventType.HARD_ACCEL)

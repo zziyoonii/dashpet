@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dashpet.engine.DrivingEngine
 import com.example.dashpet.engine.DrivingEvent
+import com.example.dashpet.engine.EventType
 import com.example.dashpet.engine.PetOutput
 import com.example.dashpet.signal.MockSignalSource
 import com.example.dashpet.signal.Pacing
@@ -230,6 +231,19 @@ class DemoViewModel(
     fun setDebugPanelVisible(visible: Boolean) {
         _demo.update { it.copy(debugPanelVisible = visible) }
     }
+
+    /**
+     * 확인용(디버그 빌드의 데모 모드만): 이벤트를 하나씩 돌아가며 말하게 한다. 제한 상태는 "제한 없음/있음" 칩으로 정한다.
+     * 실차 모드에서는 아무것도 하지 않는다. 쿨다운은 그대로 적용된다(같은 종류는 쿨다운 안에서 말하지 않는다).
+     */
+    fun debugSpeak() {
+        if (!_demo.value.debugAvailable || _demo.value.mode != SignalMode.DEMO) return
+        val types = EventType.entries
+        speech.debugSpeak(types[debugSpeakIndex % types.size])
+        debugSpeakIndex++
+    }
+
+    private var debugSpeakIndex = 0
 
     /** 음성 켜기/끄기. 제한이 걸려 있으면 무시하고 false(FR-016). */
     fun setVoiceEnabled(on: Boolean): Boolean = speech.setVoiceEnabled(on)

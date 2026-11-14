@@ -70,6 +70,7 @@ fun DemoControls(
     modifier: Modifier = Modifier,
     voiceEnabled: Boolean = true,
     onVoiceEnabled: (Boolean) -> Unit = {},
+    onDebugSpeak: () -> Unit = {},
 ) {
     if (!demo.debugAvailable) return
     Column(
@@ -111,6 +112,11 @@ fun DemoControls(
                 ) {
                     Text(if (demo.playback == PlaybackState.PLAYING) "정지" else "재생", fontSize = 14.sp)
                 }
+                // 확인용: 이벤트를 하나씩 돌아가며 말하게 한다. 제한 상태는 아래 칩으로 정한다.
+                OutlinedButton(
+                    onClick = onDebugSpeak,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PetPalette.Ink),
+                ) { Text("말하기", fontSize = 14.sp) }
                 // 선택 상태 표시: 선택된 버튼은 채워지고 "✓" 가 붙는다(색만으로 구분하지 않음).
                 RestrictionState.entries.forEach { state ->
                     val selected = demo.manualRestriction == state
