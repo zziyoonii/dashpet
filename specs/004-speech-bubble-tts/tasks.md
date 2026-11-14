@@ -40,7 +40,7 @@ description: "말풍선과 음성(TTS) 구현 작업 목록"
 
 **Purpose**: 의존성, 권한, 환경 확인
 
-- [ ] T001 에뮬레이터를 Cold boot 로 띄우고 스파이크를 한다: `$ADB shell pm list packages | grep -i -E "caas|tts|speech"` 와 `$ADB shell pm list permissions | grep -i TTS_SERVICE`. 결과(서비스와 권한 유무, 부팅이 또 멈췄는지)를 `specs/004-speech-bubble-tts/checklists/verification-log.md` 에 새로 만들어 적는다. 없어도 다음 단계는 진행한다(`UNAVAILABLE` 로 떨어지는 것이 정상, research 미결 1).
+- [X] T001 에뮬레이터를 Cold boot 로 띄우고 스파이크를 한다: `$ADB shell pm list packages | grep -i -E "caas|tts|speech"` 와 `$ADB shell pm list permissions | grep -i TTS_SERVICE`. 결과(서비스와 권한 유무, 부팅이 또 멈췄는지)를 `specs/004-speech-bubble-tts/checklists/verification-log.md` 에 새로 만들어 적는다. 없어도 다음 단계는 진행한다(`UNAVAILABLE` 로 떨어지는 것이 정상, research 미결 1).
 - [X] T002 `gradle/libs.versions.toml` 에 `pleosTts = "3.3.1"` 과 `pleos-tts = { group = "ai.pleos.playground", name = "TextToSpeech", version.ref = "pleosTts" }` 를 추가하고, `signal/build.gradle.kts` 의 `dependencies` 에 `implementation(libs.pleos.tts)` 를 더한다. `./gradlew :signal:assembleDebug` 가 통과하는지 확인하고, 병합된 manifest 의 `INTERNET` 권한과 `kotlinx-coroutines-android` 가 1.10.2 로 올라가는지 기록한다(research R10).
 - [X] T003 `app/src/main/AndroidManifest.xml` 에 `<uses-permission android:name="pleos.car.permission.TTS_SERVICE" />` 하나만 추가한다. 다른 권한은 더하지 않는다(헌장 IV). 승인 여부는 `[확인 필요]` 로 주석에 남긴다.
 
@@ -128,7 +128,7 @@ description: "말풍선과 음성(TTS) 구현 작업 목록"
 - [X] T029 [P] [US3] `signal/voice/PleosSpeechOutput.kt`(`internal`, SDK 를 import 하는 유일한 파일): `TextToSpeech(context, Mode.ON_DEVICE)` → `initialize(OnInitializeListener)` 성공 시 리스너 등록, `setLocale(ko-KR)`, `setAudioAttributes`. `EventListener` 의 `onStart/onDone/onStop` 을 `Started/Finished/Stopped` 로, `onError(ErrorType)` 를 `else` 분기까지 포함해 `Failed(ENGINE_ERROR)` 로 바꾼다. `PERMISSION_DENIED`, `NOT_SUPPORTED_API`, 초기화 실패는 `availability = UNAVAILABLE`(한 번 불가면 그 세션에서 재시도 안 함). 선행 무음은 같은 `AudioAttributes` 의 무음 `AudioTrack` 으로 흘린다(`[확인 필요]` 첫 음절 잘림 방지 효과). `release()` 는 stop → 리스너 제거 → SDK `release()` → 포커스 반납 순서이고 해제한 인스턴스를 다시 쓰지 않는다. 예외가 밖으로 새지 않는다. `isSupported` 류 확인은 `docs/02-sdk-reference.md` 에서 시그니처를 확인한 것만 쓰고 모르면 `[확인 필요]`.
 - [X] T030 [US3] `SpeechCoordinator.onForeground()` 에서 음성을 초기화(이미 되어 있으면 아무것도 안 함)하고 `onBackground()` 에서 재생 중지 → 포커스 반납 → SDK 해제 → 말풍선 지움을 한다. 화면에 보이지 않는 동안 온 이벤트는 말하지 않는다(FR-011). `SpeechCoordinatorTest` 에 이 두 동작과 20회 반복 시 `requestCount == abandonCount` 케이스를 추가해 통과시킨다.
 - [X] T031 [US3] `DemoViewModel`/`HomeScreen` 에서 `NoOpSpeechOutput` 대신 실제 `SpeechPlayer` + `PleosSpeechOutput` + `AndroidAudioFocusGateway` 를 주입하고 `onForeground/onBackground` 를 화면 생명주기(`LifecycleEventObserver` 또는 기존 방식)에 연결한다. 에뮬레이터에 CAAS 가 없으면 `voice=UNAVAILABLE` 로그가 한 줄 찍히고 앱은 정상이어야 한다(T001 결과 참고).
-- [ ] T032 [US3] `./gradlew :app:installDebug` 후 `quickstart.md` 2절을 실행해 첫 실행 로그(`Speech`, `CarSignal`)를 확인하고 결과를 `verification-log.md` 에 적는다(음성이 `UNAVAILABLE` 이면 그 이유와 함께 소리 확인은 실차로 미룸으로 기록).
+- [X] T032 [US3] `./gradlew :app:installDebug` 후 `quickstart.md` 2절을 실행해 첫 실행 로그(`Speech`, `CarSignal`)를 확인하고 결과를 `verification-log.md` 에 적는다(음성이 `UNAVAILABLE` 이면 그 이유와 함께 소리 확인은 실차로 미룸으로 기록).
 
 **Checkpoint**: 가짜 기준으로 포커스 규칙이 닫혔고 실제 TTS 가 연결됐다.
 

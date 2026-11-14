@@ -38,3 +38,17 @@
 ## AGENTS.md 12절 체크
 
 권한 최소화(1개 추가), Capability 확인(`UNAVAILABLE` 로 떨어짐), 주행 규제(제한 중 글자 없음, 터치 없음, 애니메이션 없음), 오디오 포커스(요청/반납 짝, 4가지 처리), 가로/세로(미확인), CCP Back(기존 유지), release 시점(화면에서 사라질 때 해제, 해제한 인스턴스 재사용 없음), 비밀값(없음).
+
+## 에뮬레이터 확인 (2026-11-14, 일부)
+
+부팅: 화면 있는 모드(기본 GPU, `swiftshader_indirect`, `-gpu host`)는 모두 `Failed to find ColorBuffer` 후 멈췄다. `-no-window -no-audio -gpu swiftshader_indirect -feature -Vulkan` 으로는 부팅됐다. 이 모드는 소리를 낼 수 없어서 음성 출력 확인은 여전히 못 했다.
+
+| 항목 | 결과 |
+|-|-|
+| T001 스파이크 | `ai.pleos.playground.caas` 패키지와 `pleos.car.permission.TTS_SERVICE` 권한이 있다. 설치만으로 `granted=true`(일반 권한, `pm grant` 는 "not a changeable permission type") |
+| T032 첫 실행 | 앱이 종료되지 않고 열린다. 로그 `voice availability=UNKNOWN` → `voice=READY` (약 2초) |
+| 이벤트 → 말하기 | 기어 P에서 `TRIP_START bubble=true`, D단(제한 있음, `bits=0x50`)에서 `HARD_ACCEL bubble=false` 가 로그에 찍힘. 말하기 시작과 함께 포커스 요청(granted=true), 선점 시 반납 후 재요청 |
+| 제한 중 화면 | 스크린샷에서 말풍선 없음, 정적 자세, 음성 스위치 비활성 모양. `gfxinfo` Total frames rendered: 0 |
+| 제한 중 CPU | `top` 두 번 측정 1.5%, 5.3% (5% 기준 근처, 표본이 적어 `[확인 필요]`) |
+| 커버 20회 포커스 짝(시나리오 15) | 미확인. 커버 동안 이벤트가 만들어지지 않아 요청 0, 반납 0이라 의미 없음(5회 재시도도 같음) |
+| 미확인 | 소리, 선행 무음 효과, 포커스 4가지 실제 변경(시나리오 9~10), 시나리오 11~14, 16~17, 가로/세로 |
