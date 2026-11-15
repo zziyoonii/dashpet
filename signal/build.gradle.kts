@@ -5,7 +5,7 @@ plugins {
 android {
     namespace = "com.example.dashpet.signal"
     compileSdk {
-        version = release(37)
+        version = release(34)
     }
 
     defaultConfig {
@@ -18,7 +18,8 @@ android {
 }
 
 dependencies {
-    implementation(libs.kotlinx.coroutines.core)
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.pleos.vehicle) // Pleos SDK 의존성은 :signal 에만 둔다
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

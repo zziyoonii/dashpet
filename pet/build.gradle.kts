@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "com.example.dashpet.pet"
     compileSdk {
-        version = release(37)
+        version = release(34)
     }
 
     defaultConfig {

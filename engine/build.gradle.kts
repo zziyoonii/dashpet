@@ -5,7 +5,7 @@ plugins {
 android {
     namespace = "com.example.dashpet.engine"
     compileSdk {
-        version = release(37)
+        version = release(34)
     }
 
     defaultConfig {
@@ -19,6 +19,7 @@ android {
 
 dependencies {
     api(project(":signal"))
-    implementation(libs.kotlinx.coroutines.core)
+    api(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
