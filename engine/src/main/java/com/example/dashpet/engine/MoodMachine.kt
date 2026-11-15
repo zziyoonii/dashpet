@@ -42,7 +42,7 @@ internal class MoodMachine(private val config: EngineConfig) {
         EventType.COLLISION_RISK -> Mood.STARTLED
         EventType.SEATBELT_OK, EventType.GOOD_LANE_CHANGE -> Mood.HAPPY
         EventType.TRIP_END -> if (scoreAfter >= config.happyScoreThreshold) Mood.HAPPY else null
-        EventType.TRIP_START, EventType.NO_SIGNAL_LANE_CHANGE -> null
+        EventType.TRIP_START, EventType.SEATBELT_WARN, EventType.NO_SIGNAL_LANE_CHANGE -> null
     }
 
     private fun durationMs(mood: Mood): Long = when (mood) {

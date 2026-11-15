@@ -57,7 +57,7 @@ class DrivingEngineTest {
         advanceUntilIdle()
         val expected = runScenario(DemoScenarios.demoCommute).allEvents()
         assertEquals(expected, got)
-        assertEquals(7, got.size)
+        assertEquals(8, got.size)
         engine.stop()
         collector.cancel()
     }

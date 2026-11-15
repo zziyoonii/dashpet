@@ -23,6 +23,9 @@ internal class TripTracker(private val config: EngineConfig) {
         var seatbeltOk = false
     }
 
+    /** 마지막으로 받은 벨트 경고 상태. 주행 밖(주차 중)에 받은 값도 기억해서 출발 순간에 쓴다. 값을 받은 적이 없으면 꺼짐. */
+    private var seatbeltActive = false
+
     private val completed = ArrayList<Trip>()
     private var active: Active? = null
     private var tripCount = 0
@@ -56,8 +59,20 @@ internal class TripTracker(private val config: EngineConfig) {
     fun onSpeed(speedMps: Float, atMs: Long): DrivingEvent? =
         if (phase == TripPhase.ARRIVING && speedMps == 0f) tripEnd(atMs) else null
 
-    /** 출발 이후 벨트 경고가 켜졌다가 꺼질 때만 주행당 한 번 `SEATBELT_OK`. */
+    /**
+     * 출발 직후([TripPhase.PARKED] 에서 [TripPhase.IN_TRIP] 로 바뀐 바로 그 신호에서) 벨트 경고가 켜져 있으면 `SEATBELT_WARN`.
+     * 주행당 한 번이며, 이어서 경고가 꺼지면 [onSeatbelt] 가 `SEATBELT_OK` 를 낸다. 경고 값이 없던(미지원) 차량에서는 나지 않는다.
+     */
+    fun onDeparture(atMs: Long): DrivingEvent? {
+        val trip = active ?: return null
+        if (!seatbeltActive) return null
+        trip.seatbeltWarned = true
+        return DrivingEvent(EventType.SEATBELT_WARN, atMs, scoreDelta = config.scoreWeight(EventType.SEATBELT_WARN))
+    }
+
+    /** 출발 이후 벨트 경고가 켜졌다가 꺼질 때만 주행당 한 번 `SEATBELT_OK`. 주행 밖에서 받은 값은 기억만 한다. */
     fun onSeatbelt(isActive: Boolean, atMs: Long): DrivingEvent? {
+        seatbeltActive = isActive
         val trip = active ?: return null
         if (isActive) {
             trip.seatbeltWarned = true

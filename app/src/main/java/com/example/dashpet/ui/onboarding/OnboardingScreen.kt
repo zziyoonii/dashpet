@@ -114,17 +114,17 @@ fun OnboardingScreen(
                 appearance = previewAppearance(state),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .height(260.dp),
             )
         }
         Column(
             Modifier
                 .weight(1f)
-                .widthIn(max = 640.dp)
+                .widthIn(max = 960.dp)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             when (state.step) {
                 OnboardingStep.CONSENT -> ConsentStep(
@@ -164,7 +164,7 @@ fun OnboardingScreen(
                         nextEnabled = true,
                         onNext = { keyboard?.hide(); state = state.next() },
                         onBack = { state = state.back() },
-                        extra = { OutlinedButton(onClick = { keyboard?.hide(); state = state.skipMeaning() }, colors = outlined()) { Text("건너뛰기", fontSize = 14.sp) } },
+                        extra = { OutlinedButton(onClick = { keyboard?.hide(); state = state.skipMeaning() }, colors = outlined()) { Text("건너뛰기", fontSize = 24.sp) } },
                     )
                 }
                 OnboardingStep.PERSONALITY -> {
@@ -176,8 +176,8 @@ fun OnboardingScreen(
                     Buttons("다음", state.personality != null, { state = state.next() }, { state = state.back() })
                 }
                 OnboardingStep.COLOR -> {
-                    Title("몸 색을 골라 주세요")
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Title("펫 색을 골라 주세요")
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                         OnboardingPalette.colors.forEach { c ->
                             ColorSwatch(c.name, c.argb, selected = state.colorArgb == c.argb, onClick = { state = state.chooseColor(c.argb) })
                         }
@@ -203,20 +203,20 @@ private fun previewAppearance(state: OnboardingState) = PetProfile(
 
 @Composable
 private fun ConsentStep(onAgree: () -> Unit, onLater: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Title("시작하기 전에 알려드려요")
         ConsentRow("읽는 정보", "차량 속도, 기어, 브레이크, 방향지시등, 안전벨트 경고, 주행 제한 상태, 방위각(급커브 판정)")
         ConsentRow("쓰는 목적", "주행에 맞춰 펫이 반응하고, 도착하면 점수와 한 마디를 보여줘요.")
         ConsentRow("위치", "방위각만 쓰고 좌표는 저장하지 않아요.")
         ConsentRow("저장", "이름, 성격, 색, 지난 점수는 이 기기에만 저장해요. 이 앱은 정보를 서버로 보내지 않아요.")
         Caption("동의하지 않으면 방위각을 읽지 않고(급커브 반응 없음), 이름 짓기는 나중에 할 수 있어요.")
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             Button(
                 onClick = onAgree,
-                modifier = Modifier.heightIn(min = 48.dp),
+                modifier = Modifier.heightIn(min = 68.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PetPalette.Accent, contentColor = PetPalette.Bg),
-            ) { Text("동의하고 시작", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
-            OutlinedButton(onClick = onLater, modifier = Modifier.heightIn(min = 48.dp), colors = outlined()) { Text("나중에 하기", fontSize = 16.sp) }
+            ) { Text("동의하고 시작", fontSize = 26.sp, fontWeight = FontWeight.Bold) }
+            OutlinedButton(onClick = onLater, modifier = Modifier.heightIn(min = 68.dp), colors = outlined()) { Text("나중에 하기", fontSize = 26.sp) }
         }
     }
 }
@@ -224,16 +224,16 @@ private fun ConsentStep(onAgree: () -> Unit, onLater: () -> Unit) {
 @Composable
 private fun ConsentRow(head: String, body: String) {
     Column {
-        Text(head, color = PetPalette.Accent, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-        Text(body, color = PetPalette.Ink, fontSize = 14.sp)
+        Text(head, color = PetPalette.Accent, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(body, color = PetPalette.Ink, fontSize = 24.sp)
     }
 }
 
 @Composable
-private fun Title(text: String) = Text(text, color = PetPalette.Ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+private fun Title(text: String) = Text(text, color = PetPalette.Ink, fontSize = 36.sp, fontWeight = FontWeight.Bold)
 
 @Composable
-private fun Caption(text: String) = Text(text, color = PetPalette.Muted, fontSize = 14.sp)
+private fun Caption(text: String) = Text(text, color = PetPalette.Muted, fontSize = 24.sp)
 
 @Composable
 private fun TextField(
@@ -248,9 +248,9 @@ private fun TextField(
         value = value,
         onValueChange = onChange,
         singleLine = true,
-        label = { Text(label, fontSize = 14.sp) },
-        supportingText = { Text(counter, fontSize = 12.sp, color = PetPalette.Muted) },
-        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 18.sp, color = PetPalette.Ink),
+        label = { Text(label, fontSize = 24.sp) },
+        supportingText = { Text(counter, fontSize = 20.sp, color = PetPalette.Muted) },
+        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 30.sp, color = PetPalette.Ink),
         keyboardOptions = KeyboardOptions(imeAction = imeAction),
         keyboardActions = KeyboardActions(onNext = { onImeAction() }, onDone = { onImeAction() }),
         colors = OutlinedTextFieldDefaults.colors(
@@ -275,13 +275,13 @@ private fun Buttons(
     onBack: (() -> Unit)?,
     extra: @Composable () -> Unit = {},
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (onBack != null) OutlinedButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp), colors = outlined()) { Text("이전", fontSize = 16.sp) }
+    Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (onBack != null) OutlinedButton(onClick = onBack, modifier = Modifier.heightIn(min = 68.dp), colors = outlined()) { Text("이전", fontSize = 26.sp) }
         extra()
         Button(
             onClick = onNext,
             enabled = nextEnabled,
-            modifier = Modifier.heightIn(min = 48.dp),
+            modifier = Modifier.heightIn(min = 68.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = PetPalette.Accent,
                 contentColor = PetPalette.Bg,
@@ -289,7 +289,7 @@ private fun Buttons(
                 disabledContainerColor = PetPalette.Line,
                 disabledContentColor = PetPalette.Muted,
             ),
-        ) { Text(nextLabel, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+        ) { Text(nextLabel, fontSize = 26.sp, fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -305,12 +305,12 @@ private fun PersonalityCard(p: Personality, selected: Boolean, onClick: () -> Un
             .border(BorderStroke(if (selected) 3.dp else 1.dp, if (selected) PetPalette.Accent else PetPalette.Line), RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .semantics { role = Role.RadioButton; this.selected = selected; contentDescription = "${p.label}. ${p.description}" }
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text((if (selected) "✓ " else "") + p.label, color = PetPalette.Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text(p.description, color = PetPalette.Muted, fontSize = 14.sp)
-        Text("말투 예시: $sample", color = PetPalette.Ink, fontSize = 14.sp)
+        Text((if (selected) "✓ " else "") + p.label, color = PetPalette.Ink, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Text(p.description, color = PetPalette.Muted, fontSize = 24.sp)
+        Text("말투 예시: $sample", color = PetPalette.Ink, fontSize = 24.sp)
     }
 }
 
@@ -319,7 +319,7 @@ private fun ColorSwatch(name: String, argb: Long, selected: Boolean, onClick: ()
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier
-                .size(56.dp)
+                .size(84.dp)
                 .clip(CircleShape)
                 .background(Color(argb.toInt()))
                 .border(BorderStroke(if (selected) 4.dp else 1.dp, if (selected) PetPalette.Ink else PetPalette.Line), CircleShape)
@@ -327,10 +327,10 @@ private fun ColorSwatch(name: String, argb: Long, selected: Boolean, onClick: ()
                 .semantics { role = Role.RadioButton; this.selected = selected; contentDescription = name },
             contentAlignment = Alignment.Center,
         ) {
-            if (selected) Text("✓", color = PetPalette.Bg, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            if (selected) Text("✓", color = PetPalette.Bg, fontSize = 36.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.size(2.dp))
-        Text(name, color = PetPalette.Muted, fontSize = 12.sp)
+        Text(name, color = PetPalette.Muted, fontSize = 20.sp)
     }
 }
 

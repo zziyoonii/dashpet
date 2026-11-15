@@ -61,7 +61,7 @@ class EngineCoreTickTest {
     }
 
     @Test
-    fun demoWithTicksKeepsSevenEventsAndScore94AndSquashedReturnsToIdle() = runTest {
+    fun demoWithTicksKeepsEightEventsAndScore94AndSquashedReturnsToIdle() = runTest {
         val source = MockSignalSource(DemoScenarios.demoCommute, Pacing.IMMEDIATE)
         val signals = mutableListOf<RawSignal>()
         val job = launch { source.signals.collect { signals += it } }
@@ -74,7 +74,7 @@ class EngineCoreTickTest {
         val steps = signals.map { core.process(it) }
         assertEquals(
             listOf(
-                EventType.TRIP_START, EventType.SEATBELT_OK, EventType.HARD_CORNER, EventType.GOOD_LANE_CHANGE,
+                EventType.TRIP_START, EventType.SEATBELT_WARN, EventType.SEATBELT_OK, EventType.HARD_CORNER, EventType.GOOD_LANE_CHANGE,
                 EventType.LANE_DEPARTURE, EventType.HARD_BRAKE, EventType.TRIP_END,
             ),
             steps.allEvents().map { it.type },

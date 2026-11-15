@@ -31,6 +31,7 @@ object ArrivalReports {
         EventType.HARD_ACCEL to "급가속",
         EventType.NO_SIGNAL_LANE_CHANGE to "깜빡이 없는 차선 변경",
         EventType.GOOD_LANE_CHANGE to "깜빡이 켠 차선 변경",
+        EventType.SEATBELT_WARN to "출발 전 벨트 경고",
         EventType.SEATBELT_OK to "벨트 확인",
     )
 

@@ -55,7 +55,11 @@ class EngineCore(private val config: EngineConfig = EngineConfig()) {
             }
             is Heading -> candidates += accel.onHeading(t, signal.headingDeg)
             is BrakePedal -> accel.onBrakePedal(signal.pressed)
-            is ParkedState -> trips.onParked(signal.parked, t, lastSpeedMps)?.let(candidates::add)
+            is ParkedState -> trips.onParked(signal.parked, t, lastSpeedMps)?.let { event ->
+                candidates += event
+                // 출발 순간에 벨트 경고가 켜져 있었으면 출발 인사 바로 뒤에 "벨트부터!" 를 낸다.
+                if (event.type == EventType.TRIP_START) trips.onDeparture(t)?.let(candidates::add)
+            }
             is VehicleWarning ->
                 if (signal.type == WarningType.SEATBELT) {
                     trips.onSeatbelt(signal.active, t)?.let(candidates::add)

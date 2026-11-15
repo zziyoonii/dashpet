@@ -2,6 +2,8 @@ package com.example.dashpet.engine
 
 enum class EventType {
     TRIP_START,
+    /** 출발하는 순간 안전벨트 경고가 켜져 있었다("벨트부터!"). 이어서 경고가 꺼지면 [SEATBELT_OK] 가 난다. */
+    SEATBELT_WARN,
     SEATBELT_OK,
     HARD_ACCEL,
     HARD_BRAKE,

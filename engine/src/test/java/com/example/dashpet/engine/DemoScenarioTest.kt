@@ -7,7 +7,7 @@ import org.junit.Test
 
 class DemoScenarioTest {
     private val expectedTypes = listOf(
-        EventType.TRIP_START, EventType.SEATBELT_OK, EventType.HARD_CORNER, EventType.GOOD_LANE_CHANGE,
+        EventType.TRIP_START, EventType.SEATBELT_WARN, EventType.SEATBELT_OK, EventType.HARD_CORNER, EventType.GOOD_LANE_CHANGE,
         EventType.LANE_DEPARTURE, EventType.HARD_BRAKE, EventType.TRIP_END,
     )
 
@@ -16,7 +16,7 @@ class DemoScenarioTest {
     private fun finalScore(core: EngineCore, steps: List<EngineStep>) = 100 + steps.allEvents().sumOf { it.scoreDelta }
 
     @Test
-    fun demoCommuteProducesSevenEventsInOrderAndScore94() { // SC-001
+    fun demoCommuteProducesEightEventsInOrderAndScore94() { // SC-001
         val core = EngineCore()
         val steps = DemoScenarios.demoCommute.expand().map { core.process(it) }
         assertEquals(expectedTypes, steps.allEvents().map { it.type })
@@ -30,6 +30,7 @@ class DemoScenarioTest {
     fun eventTimesMatchTheStory() {
         val events = run().allEvents().associateBy { it.type }
         assertEquals(8_000L, events.getValue(EventType.TRIP_START).atMs)
+        assertEquals(8_000L, events.getValue(EventType.SEATBELT_WARN).atMs) // 출발 순간 벨트 경고가 켜져 있다
         assertEquals(10_000L, events.getValue(EventType.SEATBELT_OK).atMs)
         assertTrue(events.getValue(EventType.HARD_CORNER).atMs in 22_000L..23_000L)
         assertEquals(32_000L, events.getValue(EventType.GOOD_LANE_CHANGE).atMs)
