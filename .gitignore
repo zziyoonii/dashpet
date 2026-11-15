@@ -24,3 +24,10 @@ build/
 /docs/
 /raw/
 /RESOURCES.md
+
+# 릴리스 서명 키와 비밀번호 (절대 커밋하지 않는다)
+/keystore/
+/keystore.properties
+*.jks
+*.keystore
+*.p12
