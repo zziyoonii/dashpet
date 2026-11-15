@@ -165,7 +165,7 @@ description: "PetView 구현 작업 목록"
 - [X] T049 [US6] `app/src/main/.../ui/demo/DemoViewModel.kt`: `ViewModel` 이 `MockSignalSource(DemoScenarios.demoCommute, REAL_TIME)` 와 `DrivingEngine` 을 소유, `output`, `events`, `demo`(`DemoState`) 노출, `togglePlay`, `stop`, `setRestriction`, `setDebugPanelVisible`. 확인용 시각은 ViewModel 경과 타이머(표시만). `viewModelScope`(메인)에서 동작(T048 을 통과시킴, T014 의존).
 - [X] T050 [P] [US6] `app/src/main/.../ui/demo/DemoControls.kt`: 재생/정지 버튼, 제한 상태 토글(없음/있음/알 수 없음), 확인용 패널(현재 감정, 모션 등급, 시나리오 시각, 숨기기). 텍스트는 12sp 이상, 대비 4.5:1 이상. 디버그 불가 빌드에서는 표시하지 않음.
 - [X] T051 [US6] `app/src/main/.../ui/screens/HomeScreen.kt` 를 교체한다: `PetView` + `LaunchedEffect` 로 `controller.collectFrom(engine)`, `DemoControls` 배치, 앱의 `ApplicationInfo.FLAG_DEBUGGABLE` 로 `debugAvailable` 계산, 데모 외형(`"장수"`, `#4F7CFF`, `STURDY`) 사용, 세로/가로 모두 반응형(T049, T050, T035 의존). `@Preview` 포함.
-- [ ] T052 [US6] 수동 확인: 에뮬레이터 또는 프리뷰에서 재생이 끝까지 가고 22/38/46초 장면에서 펫이 반응하는지, 8~52초에 풀 모션이 없는지 `quickstart.md` B, C, H 로 확인하고 결과를 기록한다.
+- [X] T052 [US6] 수동 확인: 에뮬레이터 또는 프리뷰에서 재생이 끝까지 가고 22/38/46초 장면에서 펫이 반응하는지, 8~52초에 풀 모션이 없는지 `quickstart.md` B, C, H 로 확인하고 결과를 기록한다.
 
 **Checkpoint**: 11/15 영상용 데모 재생이 가능하다(US1~US3 + US6).
 
