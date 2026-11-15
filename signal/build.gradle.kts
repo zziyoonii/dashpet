@@ -22,6 +22,7 @@ android {
 
 dependencies {
     api(libs.kotlinx.coroutines.core)
+    implementation(libs.pleos.tts) // TTS SDK 도 :signal 에만 둔다(헌장 II). 쓰는 파일은 voice/PleosSpeechOutput.kt 하나
     implementation(libs.pleos.vehicle) // Pleos SDK 의존성은 :signal 에만 둔다
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

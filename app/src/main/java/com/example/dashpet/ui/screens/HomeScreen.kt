@@ -35,6 +35,9 @@ import com.example.dashpet.pet.PetView
 import com.example.dashpet.pet.Personality
 import com.example.dashpet.pet.collectFrom
 import com.example.dashpet.signal.car.CarSignalSource
+import com.example.dashpet.signal.voice.createPleosSpeechOutput
+import com.example.dashpet.ui.speech.SharedPrefsVoiceSettings
+import com.example.dashpet.ui.speech.SpeechBubble
 import com.example.dashpet.ui.demo.DemoControls
 import com.example.dashpet.ui.demo.DemoViewModel
 import com.example.dashpet.ui.demo.SignalMode
@@ -56,6 +59,9 @@ fun HomeScreen() {
                     debugAvailable = debuggable,
                     diagnostics = vehicle.diagnostics,
                     log = { Log.i("CarSignal", it) },
+                    speechFactory = { scope -> createPleosSpeechOutput(context, scope, log = { Log.i("Speech", it) }) },
+                    voiceSettings = SharedPrefsVoiceSettings(context),
+                    speechLog = { Log.i("Speech", it) },
                 ) as T
             }
         },
@@ -72,6 +78,8 @@ fun HomeScreen() {
 
     val demo by viewModel.demo.collectAsState()
     val output by viewModel.output.collectAsState()
+    val bubble by viewModel.speech.bubble.collectAsState()
+    val voiceEnabled by viewModel.speech.voiceEnabled.collectAsState()
 
     // 속도(CAR_SPEED)는 런타임 권한이다. 실차 모드로 열릴 때 한 번만 요청하고(회전해도 다시 묻지 않음),
     // 결과가 오면 소스를 다시 시작한다. 거부해도 앱은 속도 없이 동작한다.
@@ -89,6 +97,14 @@ fun HomeScreen() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         PetView(controller = controller, appearance = DemoAppearance, modifier = Modifier.fillMaxSize())
+        // 말풍선은 위쪽에 둔다. 제한이 있거나 알 수 없으면 null 이라 아무것도 그리지 않는다.
+        SpeechBubble(
+            state = bubble,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .safeDrawingPadding()
+                .padding(16.dp),
+        )
         // 컨트롤은 아래쪽에 두고, 가로 화면에서는 폭을 제한한다. 내용이 많아지면 FlowRow 가 줄바꿈한다.
         DemoControls(
             demo = demo,
@@ -98,6 +114,9 @@ fun HomeScreen() {
             onRestriction = viewModel::setRestriction,
             onPanelVisible = viewModel::setDebugPanelVisible,
             onMode = viewModel::setMode,
+            voiceEnabled = voiceEnabled,
+            onVoiceEnabled = { viewModel.setVoiceEnabled(it) },
+            onDebugSpeak = viewModel::debugSpeak,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .safeDrawingPadding()

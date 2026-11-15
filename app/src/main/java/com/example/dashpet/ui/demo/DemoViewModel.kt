@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dashpet.engine.DrivingEngine
 import com.example.dashpet.engine.DrivingEvent
+import com.example.dashpet.engine.EventType
 import com.example.dashpet.engine.PetOutput
 import com.example.dashpet.signal.MockSignalSource
 import com.example.dashpet.signal.Pacing
@@ -12,6 +13,12 @@ import com.example.dashpet.signal.RestrictionState
 import com.example.dashpet.signal.SwitchableSignalSource
 import com.example.dashpet.signal.VehicleSignalSource
 import com.example.dashpet.signal.car.SignalDiagnostics
+import com.example.dashpet.signal.voice.NoOpSpeechOutput
+import com.example.dashpet.signal.voice.SpeechOutput
+import com.example.dashpet.ui.speech.MemoryVoiceSettings
+import com.example.dashpet.ui.speech.SpeechCoordinator
+import com.example.dashpet.ui.speech.VoiceSettings
+import kotlinx.coroutines.CoroutineScope
 import com.example.dashpet.signal.scenario.DemoScenarios
 import com.example.dashpet.signal.scenario.Scenario
 import kotlinx.coroutines.Job
@@ -64,6 +71,11 @@ class DemoViewModel(
     private val diagnostics: StateFlow<SignalDiagnostics>? = null,
     /** 모드 전환 같은 드문 사건만 한 줄씩 남긴다(앱은 `Log.i("CarSignal", it)` 를 넘긴다). 단위 테스트가 Android 없이 돌도록 주입받는다. */
     private val log: (String) -> Unit = {},
+    /** 음성 출력을 만든다. 화면에 보일 때마다 새로 만들고 사라지면 해제한다. 앱은 `createPleosSpeechOutput` 을 넘긴다. */
+    speechFactory: (CoroutineScope) -> SpeechOutput = { NoOpSpeechOutput() },
+    voiceSettings: VoiceSettings = MemoryVoiceSettings(),
+    speechLog: (String) -> Unit = {},
+    clock: () -> Long = { System.nanoTime() / 1_000_000 },
 ) : ViewModel() {
     private val mock = MockSignalSource(scenario, pacing)
     private val demoSource = PassiveSource(mock)
@@ -76,6 +88,17 @@ class DemoViewModel(
 
     /** 시나리오 총 길이(마지막 신호 시각 + 틱 꼬리). */
     val totalMs: Long = (scenario.expand().lastOrNull()?.timestampMs ?: 0L) + MockSignalSource.DEFAULT_TAIL_MS
+
+    /** 말풍선과 음성(specs/004). 엔진의 이벤트와 출력을 받아 쓰기만 한다. */
+    val speech = SpeechCoordinator(
+        scope = viewModelScope,
+        events = engine.events,
+        output = engine.output,
+        speechFactory = speechFactory,
+        settings = voiceSettings,
+        clock = clock,
+        log = speechLog,
+    )
 
     val output: StateFlow<PetOutput> get() = engine.output
     val events: SharedFlow<DrivingEvent> get() = engine.events
@@ -95,6 +118,7 @@ class DemoViewModel(
     private var foreground = false
 
     init {
+        speech.start() // 이벤트 구독은 엔진 시작 전에 건다(구독 전 이벤트는 받지 못한다)
         // 데모 모드의 엔진은 항상 켜 둔다(수동 제한 주입이 항상 처리되도록). 실차 모드는 화면에 보일 때 시작한다.
         if (initialMode == SignalMode.DEMO) engine.start()
         // 진단은 실차 모드에서만 보인다. 데모 모드에서는 값이 바뀌어도 반영하지 않는다.
@@ -118,6 +142,7 @@ class DemoViewModel(
         timer = null
         mock.stop()
         engine.stop()
+        speech.reset() // 이전 모드의 말풍선과 대기 중인 음성이 남지 않는다
         switchable.select(if (mode == SignalMode.VEHICLE) vehicleSource else demoSource)
         // 실차 모드는 화면에 보이는 동안에만 시작한다. 보이지 않는 중에 바꿨다면 다시 보일 때 시작한다.
         if (mode == SignalMode.DEMO || foreground) engine.start()
@@ -162,6 +187,7 @@ class DemoViewModel(
         timer = null
         mock.stop()
         engine.stop()
+        speech.reset()
         engine.start()
         _demo.update { it.copy(playback = PlaybackState.STOPPED, elapsedMs = 0L, manualRestriction = null) }
     }
@@ -179,12 +205,14 @@ class DemoViewModel(
      */
     fun onForeground() {
         foreground = true
+        speech.onForeground()
         if (_demo.value.mode == SignalMode.VEHICLE) engine.start()
     }
 
     /** 화면에서 사라짐. 실차 모드면 신호 수신을 멈추고 차량 서비스 연결을 정리한다. 데모 모드는 건드리지 않는다. */
     fun onBackground() {
         foreground = false
+        speech.onBackground()
         if (_demo.value.mode == SignalMode.VEHICLE) engine.stop()
     }
 
@@ -204,7 +232,24 @@ class DemoViewModel(
         _demo.update { it.copy(debugPanelVisible = visible) }
     }
 
+    /**
+     * 확인용(디버그 빌드의 데모 모드만): 이벤트를 하나씩 돌아가며 말하게 한다. 제한 상태는 "제한 없음/있음" 칩으로 정한다.
+     * 실차 모드에서는 아무것도 하지 않는다. 쿨다운은 그대로 적용된다(같은 종류는 쿨다운 안에서 말하지 않는다).
+     */
+    fun debugSpeak() {
+        if (!_demo.value.debugAvailable || _demo.value.mode != SignalMode.DEMO) return
+        val types = EventType.entries
+        speech.debugSpeak(types[debugSpeakIndex % types.size])
+        debugSpeakIndex++
+    }
+
+    private var debugSpeakIndex = 0
+
+    /** 음성 켜기/끄기. 제한이 걸려 있으면 무시하고 false(FR-016). */
+    fun setVoiceEnabled(on: Boolean): Boolean = speech.setVoiceEnabled(on)
+
     override fun onCleared() {
+        speech.onBackground()
         mock.stop()
         engine.stop()
     }
