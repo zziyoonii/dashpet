@@ -157,12 +157,33 @@ class CarSignalSource(
                 }
                 sent?.let { log("parked=${it.parked} gear=${event.gear}") }
             }
+            is CarEvent.BrakePedalChanged -> {
+                produce({ it.brake(event.pressed) }) { d, out, _ -> d.copy(brakePressed = out?.pressed ?: d.brakePressed) }
+                    ?.let { log("brake pressed=${it.pressed}") } // 바뀔 때만 한 줄
+            }
+            is CarEvent.TurnSignalChanged -> {
+                produce({ it.turnSignal(event.state) }) { d, out, _ -> d.copy(turnState = out?.state ?: d.turnState) }
+                    ?.let { log("turnSignal=${it.state}") }
+            }
+            is CarEvent.SeatbeltWarningChanged -> {
+                produce({ it.seatbelt(event.active) }) { d, out, _ -> d.copy(seatbeltWarning = out?.active ?: d.seatbeltWarning) }
+                    ?.let { log("seatbeltWarning=${it.active}") }
+            }
+            is CarEvent.HeadingChanged -> {
+                // 방위각은 자주 오므로 진단에 시각을 갱신하지 않는다(화면이 계속 다시 그려지지 않게, 위 속도와 같은 이유).
+                // 값은 세션 동안 엔진이 쓸 수 있는 것만 보내고 로그에는 남기지 않는다.
+                push { m -> m.heading(event.degrees) }
+            }
             is CarEvent.AvailabilityChanged -> {
                 setDiagnostics {
                     when (event.signal) {
                         CarSignal.SPEED -> it.copy(speedAvailability = event.availability)
                         CarSignal.GEAR -> it.copy(gearAvailability = event.availability)
                         CarSignal.RESTRICTION -> it.copy(restrictionAvailability = event.availability)
+                        CarSignal.BRAKE -> it.copy(brakeAvailability = event.availability)
+                        CarSignal.TURN_SIGNAL -> it.copy(turnSignalAvailability = event.availability)
+                        CarSignal.SEATBELT -> it.copy(seatbeltAvailability = event.availability)
+                        CarSignal.HEADING -> it.copy(headingAvailability = event.availability)
                     }
                 }
                 log("availability ${event.signal}=${event.availability}")
@@ -181,6 +202,9 @@ class CarSignalSource(
     }
 
     companion object {
+        /** 방위각(급커브)을 읽는 데 필요한 런타임 권한. 위치 권한 그룹이라 동의 뒤에만 요청한다. */
+        const val HEADING_PERMISSION = FusedHeadingGateway.PERMISSION
+
         /** 속도(`PERF_VEHICLE_SPEED`)를 읽는 데 필요한 런타임 권한. `Car.PERMISSION_SPEED` 와 같은 값이다(`:app` 이 `android.car` 를 보지 않도록 문자열로 둔다). */
         const val SPEED_PERMISSION = "android.car.permission.CAR_SPEED"
 
@@ -193,6 +217,17 @@ class CarSignalSource(
             log: (String) -> Unit = {},
             config: CarSignalConfig = CarSignalConfig(),
         ): CarSignalSource =
-            CarSignalSource(AndroidCarGateway(context.applicationContext, config.speedRate), SystemClock::elapsedRealtime, config, log)
+            CarSignalSource(
+                CompositeCarGateway(
+                    primary = AndroidCarGateway(context.applicationContext, config.speedRate),
+                    extras = listOf(
+                        PleosVehicleGateway(context.applicationContext),
+                        FusedHeadingGateway(context.applicationContext),
+                    ),
+                ),
+                SystemClock::elapsedRealtime,
+                config,
+                log,
+            )
     }
 }

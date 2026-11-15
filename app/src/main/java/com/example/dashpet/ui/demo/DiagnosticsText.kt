@@ -11,14 +11,6 @@ import java.util.Locale
  * 값을 받지 못한 신호는 "-" 와 이유(권한 거부, 미지원, 오류, 확인 중)를 함께 보인다.
  */
 fun signalDiagnosticLines(d: SignalDiagnostics): List<String> {
-    fun reason(a: SignalAvailability): String = when (a) {
-        SignalAvailability.OK -> ""
-        SignalAvailability.UNKNOWN -> " · 확인 중"
-        SignalAvailability.NO_PERMISSION -> " · 권한 거부"
-        SignalAvailability.UNSUPPORTED -> " · 미지원"
-        SignalAvailability.ERROR -> " · 오류"
-    }
-
     val link = when (d.link) {
         CarLinkState.IDLE -> "대기"
         CarLinkState.CONNECTING -> "연결 중"
@@ -48,5 +40,32 @@ fun signalDiagnosticLines(d: SignalDiagnostics): List<String> {
         "속도: $speed${reason(d.speedAvailability)}",
         "기어: $gear${reason(d.gearAvailability)}",
         "마지막 갱신: $updated",
+    )
+}
+
+private fun reason(a: SignalAvailability): String = when (a) {
+    SignalAvailability.OK -> ""
+    SignalAvailability.UNKNOWN -> " · 확인 중"
+    SignalAvailability.NO_PERMISSION -> " · 권한 거부"
+    SignalAvailability.UNSUPPORTED -> " · 미지원"
+    SignalAvailability.ERROR -> " · 오류"
+}
+
+/** 브레이크, 방향지시등, 안전벨트, 방위각(specs/005)의 진단 줄. 방위각 한 값만 보이고 좌표는 다루지 않는다. */
+fun extraSignalDiagnosticLines(d: SignalDiagnostics): List<String> {
+    val brake = when (d.brakePressed) { true -> "밟음"; false -> "뗌"; null -> "-" }
+    val turn = when (d.turnState) {
+        com.example.dashpet.signal.TurnState.OFF -> "꺼짐"
+        com.example.dashpet.signal.TurnState.LEFT -> "왼쪽"
+        com.example.dashpet.signal.TurnState.RIGHT -> "오른쪽"
+        null -> "-"
+    }
+    val belt = when (d.seatbeltWarning) { true -> "경고(미착용)"; false -> "정상"; null -> "-" }
+    val heading = d.headingDeg?.let { String.format(Locale.ROOT, "%.1f°", it) } ?: "-"
+    return listOf(
+        "브레이크: $brake${reason(d.brakeAvailability)}",
+        "방향지시등: $turn${reason(d.turnSignalAvailability)}",
+        "안전벨트: $belt${reason(d.seatbeltAvailability)}",
+        "방위각: $heading${reason(d.headingAvailability)}",
     )
 }

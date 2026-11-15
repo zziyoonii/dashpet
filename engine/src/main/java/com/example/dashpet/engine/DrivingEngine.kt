@@ -42,6 +42,11 @@ class DrivingEngine(
     /** 최신 출력. 구독하면 마지막 값을 즉시 받고, 시각을 뺀 내용이 바뀔 때만 갱신된다. */
     val output: StateFlow<PetOutput> = _output.asStateFlow()
 
+    private val _completedTrip = MutableStateFlow<Trip?>(null)
+
+    /** 방금 끝난 주행(도착 리포트용). `TRIP_END` 가 확정될 때 갱신되고, 새 세션(`start()`)에서 비워진다. 위치 값은 담지 않는다. */
+    val completedTrip: StateFlow<Trip?> = _completedTrip.asStateFlow()
+
     /** 확정된 이벤트 스트림. 구독 전의 이벤트는 받지 않는다. */
     val events: SharedFlow<DrivingEvent> = _events.asSharedFlow()
 
@@ -49,6 +54,7 @@ class DrivingEngine(
         if (job?.isActive == true) return
         core = EngineCore(config)
         _output.value = PetOutput.INITIAL
+        _completedTrip.value = null
         // 수집을 먼저 시작한 뒤 소스를 켜서 첫 신호를 놓치지 않는다.
         job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             // 소스 신호와 주입 신호를 한 수집 코루틴에서만 코어에 넣는다(순서 보장).
@@ -65,6 +71,7 @@ class DrivingEngine(
                 val step = core.process(signal)
                 lastMs = maxOf(lastMs, signal.timestampMs)
                 if (!step.output.sameStateAs(_output.value)) _output.value = step.output
+                if (step.events.any { it.type == EventType.TRIP_END }) _completedTrip.value = core.completedTrips().lastOrNull()
                 step.events.forEach { _events.emit(it) }
             }
         }

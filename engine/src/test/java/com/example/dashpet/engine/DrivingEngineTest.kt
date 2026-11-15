@@ -34,6 +34,21 @@ class DrivingEngineTest {
     }
 
     @Test
+    fun completedTripIsPublishedAtTripEndAndClearedOnNewSession() = runTest {
+        val engine = DrivingEngine(MockSignalSource(DemoScenarios.demoCommute, Pacing.IMMEDIATE), this)
+        assertEquals(null, engine.completedTrip.value)
+        engine.start()
+        advanceUntilIdle()
+        val trip = engine.completedTrip.value!!
+        assertEquals(94, trip.score) // 데모 시나리오의 기대 점수
+        assertEquals(EventType.TRIP_END, trip.events.last().type)
+        engine.stop()
+        engine.start() // 새 세션은 이전 주행 기록을 지운다
+        assertEquals(null, engine.completedTrip.value)
+        engine.stop()
+    }
+
+    @Test
     fun eventsFlowMatchesCoreResults() = runTest {
         val engine = DrivingEngine(MockSignalSource(DemoScenarios.demoCommute, Pacing.IMMEDIATE), this)
         val got = mutableListOf<DrivingEvent>()

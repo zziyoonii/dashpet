@@ -70,4 +70,33 @@ class DiagnosticsTextTest {
         assertEquals("연결: 끊김", link(CarLinkState.LOST))
         assertEquals("연결: 사용 불가", link(CarLinkState.UNAVAILABLE))
     }
+
+    @Test fun extraSignalsInitialShowChecking() {
+        assertEquals(
+            listOf("브레이크: - · 확인 중", "방향지시등: - · 확인 중", "안전벨트: - · 확인 중", "방위각: - · 확인 중"),
+            extraSignalDiagnosticLines(SignalDiagnostics.INITIAL),
+        )
+    }
+
+    @Test fun extraSignalsShowValuesAndReasons() {
+        val d = SignalDiagnostics.INITIAL.copy(
+            brakePressed = true,
+            turnState = com.example.dashpet.signal.TurnState.LEFT,
+            seatbeltWarning = false,
+            headingDeg = 123.456f,
+            brakeAvailability = SignalAvailability.OK,
+            turnSignalAvailability = SignalAvailability.OK,
+            seatbeltAvailability = SignalAvailability.UNSUPPORTED,
+            headingAvailability = SignalAvailability.NO_PERMISSION,
+        )
+        assertEquals(
+            listOf("브레이크: 밟음", "방향지시등: 왼쪽", "안전벨트: 정상 · 미지원", "방위각: 123.5° · 권한 거부"),
+            extraSignalDiagnosticLines(d),
+        )
+    }
+
+    @Test fun headingNeverShowsCoordinates() {
+        val lines = extraSignalDiagnosticLines(SignalDiagnostics.INITIAL.copy(headingDeg = 10f)).joinToString()
+        assertEquals(false, lines.contains("위도") || lines.contains("경도"))
+    }
 }

@@ -21,7 +21,11 @@ class SpeechDirector(
     private val catalog: SpeechCatalog = SpeechCatalog(),
     private val log: (String) -> Unit = {},
 ) {
-    private val lastSpokenAt = mutableMapOf<EventType, Long>()
+    /** 종류별로 마지막에 보여준(말풍선이나 음성) 시각. 짧은 간격([SpeechConfig.cooldownMs])의 기준. */
+    private val lastShownAt = mutableMapOf<EventType, Long>()
+
+    /** 종류별로 마지막에 소리를 낸 시각. 음성 간격([SpeechConfig.voiceCooldownMs])의 기준. */
+    private val lastVoiceAt = mutableMapOf<EventType, Long>()
     private val lastVariant = mutableMapOf<EventType, Int>()
     private var nextId = 1L
     private var speaking: Speak? = null
@@ -36,16 +40,16 @@ class SpeechDirector(
         tierNow = tier
         val type = event.type
         val priority = type.speechPriority()
-        if (type == EventType.TRIP_END && tripEndSpoken) { // 도착 인사는 한 번만
+        if (type == EventType.TRIP_START) tripEndSpoken = false // 새 주행이 시작되면 도착 인사는 다시 한 번 말할 수 있다
+        if (type == EventType.TRIP_END && tripEndSpoken) { // 도착 인사는 주행마다 한 번만
             log("skip event=$type reason=already-spoken")
             return emptyList()
         }
-        val last = lastSpokenAt[type]
+        val last = lastShownAt[type]
         if (last != null && nowMs - last < config.cooldownFor(priority)) {
             log("skip event=$type reason=cooldown remainingMs=${config.cooldownFor(priority) - (nowMs - last)}")
             return emptyList()
         }
-
         val line = catalog.variants(type)[0] // 변형은 말할 때 고른다. 대기 중에는 문장 쌍만 필요
         val utterance = Utterance(type, priority, line.text, line.shortText, event.atMs)
         val current = speaking
@@ -64,14 +68,12 @@ class SpeechDirector(
         }
     }
 
-    /** 모션 등급이 바뀌었다. `FULL` 에서 벗어나면 떠 있던 말풍선을 지운다(말하는 중인 한 문장은 끝까지 허용). */
+    /**
+     * 모션 등급이 바뀌었다. 말풍선은 제한 중에도 보이므로(2026-11-15 결정) 떠 있던 말풍선을 지우지 않는다.
+     * 등급은 음성 문장(제한 중에는 짧은 한 문장)을 고를 때만 쓴다.
+     */
     fun onOutput(tier: MotionTier, @Suppress("UNUSED_PARAMETER") nowMs: Long): List<SpeechCommand> {
-        val wasFull = tierNow == MotionTier.FULL
         tierNow = tier
-        if (wasFull && tier != MotionTier.FULL && bubbleVisible) {
-            bubbleVisible = false
-            return listOf(HideBubble)
-        }
         return emptyList()
     }
 
@@ -88,6 +90,12 @@ class SpeechDirector(
         return speak(p.utterance, nowMs)
     }
 
+    /** 확인용(디버그): 한 종류의 쿨다운을 비운다. 제품 경로에서는 쓰지 않는다. */
+    fun clearCooldown(type: EventType) {
+        lastShownAt.remove(type)
+        lastVoiceAt.remove(type)
+    }
+
     /** 말풍선 표시 시간이 지나 호출자가 지웠다. */
     fun onBubbleExpired() {
         bubbleVisible = false
@@ -99,7 +107,8 @@ class SpeechDirector(
             if (bubbleVisible) add(HideBubble)
             if (speaking != null) add(StopSpeaking(StopReason.RESET))
         }
-        lastSpokenAt.clear()
+        lastShownAt.clear()
+        lastVoiceAt.clear()
         lastVariant.clear()
         speaking = null
         pending = null
@@ -120,23 +129,33 @@ class SpeechDirector(
         }
     }
 
+    private fun voiceAllowed(type: EventType, nowMs: Long): Boolean = voiceRemainingMs(type, nowMs) <= 0L
+
+    private fun voiceRemainingMs(type: EventType, nowMs: Long): Long {
+        val last = lastVoiceAt[type] ?: return 0L
+        return config.voiceCooldownMs - (nowMs - last)
+    }
+
     private fun speak(utterance: Utterance, nowMs: Long): List<SpeechCommand> {
         val type = utterance.eventType
+        val full = tierNow == MotionTier.FULL
+        val voice = voiceAllowed(type, nowMs)
         val index = catalog.pick(type, lastVariant[type])
         val line = catalog.variants(type)[index]
-        val full = tierNow == MotionTier.FULL
         val cmd = Speak(
             id = nextId++,
             utterance = utterance.copy(text = line.text, shortText = line.shortText),
             variantIndex = index,
-            showBubble = full,
-            useShortText = !full,
+            showBubble = true, // 말풍선은 제한 중에도 전체 문장으로 보인다(문장은 규제 길이 안이다)
+            useShortText = !full, // 음성만 제한 중에는 짧은 한 문장
+            voice = voice,
         )
-        lastSpokenAt[type] = nowMs
+        lastShownAt[type] = nowMs
+        if (voice) lastVoiceAt[type] = nowMs
         lastVariant[type] = index
         if (type == EventType.TRIP_END) tripEndSpoken = true
         speaking = cmd
-        bubbleVisible = full
+        bubbleVisible = true
         return listOf(cmd)
     }
 }

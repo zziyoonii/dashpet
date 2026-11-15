@@ -1,6 +1,7 @@
 package com.example.dashpet.signal.car
 
 import com.example.dashpet.signal.RestrictionState
+import com.example.dashpet.signal.TurnState
 
 /** 차량 서비스와의 연결 상태. 수신을 멈추면 항상 [IDLE] 이다. */
 enum class CarLinkState { IDLE, CONNECTING, CONNECTED, UNAVAILABLE, LOST }
@@ -19,6 +20,15 @@ data class SignalDiagnostics(
     val restrictionAvailability: SignalAvailability,
     /** 마지막으로 값을 받은 시각(소스 시작 기준 ms). 제한이 변하지 않는 동안에도 연결이 정상임을 보이는 용도. */
     val lastUpdateMs: Long?,
+    // Pleos Vehicle SDK 와 FusedLocation 에서 오는 신호(specs/005). 값이 없으면 null.
+    val brakePressed: Boolean? = null,
+    val turnState: TurnState? = null,
+    val seatbeltWarning: Boolean? = null,
+    val headingDeg: Float? = null,
+    val brakeAvailability: SignalAvailability = SignalAvailability.UNKNOWN,
+    val turnSignalAvailability: SignalAvailability = SignalAvailability.UNKNOWN,
+    val seatbeltAvailability: SignalAvailability = SignalAvailability.UNKNOWN,
+    val headingAvailability: SignalAvailability = SignalAvailability.UNKNOWN,
 ) {
     companion object {
         val INITIAL = SignalDiagnostics(

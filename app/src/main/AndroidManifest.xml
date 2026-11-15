@@ -14,6 +14,18 @@
     -->
     <uses-permission android:name="android.car.permission.CAR_SPEED" />
     <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+    <!--
+        Pleos Vehicle SDK(specs/005): 브레이크 페달 CAR_DRIVE, 방향지시등 CAR_LIGHTS, 안전벨트 경고 CAR_SAFETY. 모두 normal 권한이다.
+        [확인 필요] App Market 승인 범위. 거부되면 해당 신호만 꺼지고 앱은 동작한다.
+    -->
+    <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
+    <uses-permission android:name="pleos.car.permission.CAR_LIGHTS" />
+    <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />
+    <!--
+        FusedLocation(specs/005): 방위각(급커브 판정)만 읽는다. 좌표는 저장하지 않고 서버로 보내지 않는다.
+        위치 권한 그룹(dangerous)이라 동의 화면에서 "동의하고 시작"을 누른 뒤에만 런타임으로 요청한다. [확인 필요] App Market 승인 범위.
+    -->
+    <uses-permission android:name="pleos.car.permission.FUSED_LOCATION" />
     <!-- 음성(TTS) 합성. 승인 여부 [확인 필요]: 거부돼도 앱은 음성 없이 동작한다(specs/004 FR-015) -->
     <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
 
@@ -56,6 +68,17 @@
                 android:name="distractionOptimized"
                 android:value="true" />
         </activity>
+
+        <!--
+            이름 짓기 온보딩(키보드 입력). distractionOptimized 를 선언하지 않아 정차 중에만 열린다(헌장 I).
+            MainActivity 가 제한이 없을 때만 띄운다.
+        -->
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|uiMode|keyboardHidden|layoutDirection|fontScale|locale"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
