@@ -71,3 +71,26 @@
 | 시나리오 5 (제한 중 이벤트) | 확인. `HARD_BRAKE bubble=false tier=STATIC`, 화면에 글자 없음 |
 | 말풍선 위치 | 상단 중앙, 펫과 컨트롤 패널을 가리지 않음. 글자가 작아 보이는 것은 2560 px 스크린샷 축소 때문(14 sp, 실측은 `[확인 필요]`) |
 | 단위 테스트 | `SpeechCoordinatorTest` 에 `debugSpeakFollowsCurrentTier`, `debugSpeakIgnoredInBackground` 추가, 통과 |
+
+### 시나리오 12~14 (2026-11-14, 헤드리스 에뮬레이터, "말하기" 버튼)
+
+| 항목 | 결과 |
+|-|-|
+| 시나리오 12 (연속 이벤트) | 부분 확인. 1초 안에 4번 누르면 `TRIP_START` → (중지, 반납) → `SEATBELT_OK` → `HARD_ACCEL` 순으로 말하기 시작이 찍힌다. 마지막 `HARD_BRAKE` 는 말하지 않았다(쿨다운 또는 대기 만료로 보이나 로그에 이유가 없어 **확인 필요**). |
+| 시나리오 12 발견 1 | 선점 직후 포커스 재요청이 `granted=false` 로 끝나 `speech failed reason=NO_FOCUS`. 시스템 로그(`CarAudioFocus`)는 같은 요청을 `REQUEST_GRANTED` 로 평가했다. 반납 직후 같은 리스너로 다시 요청하는 경합으로 의심하나 원인은 **확인 필요**. 실차에서 위험 경고가 이 경합에 걸리면 말이 빠질 수 있다. |
+| 시나리오 12 발견 2 | 말하기가 시작돼도 에뮬레이터의 TTS 서비스가 끝 콜백을 주지 않아 감시 시간(8초)으로 끝난다(`watchdog timeout` → 포커스 반납 → `reason=TIMEOUT`). 감시 시간 경로는 의도대로 동작. 실기기에서 끝 콜백이 오는지는 **확인 필요**. |
+| 시나리오 13 (TTS 없음, 이벤트 100개) | 확인. `pm disable-user ai.pleos.playground.caas` 후 `voice=UNAVAILABLE reason=initialize failed`. "말하기" 100번 → 22번 시도, 22번 모두 `speech failed reason=ENGINE_ERROR`, 말풍선 정상, 크래시와 ANR 없음, 같은 프로세스. 끝나고 `pm enable` 로 되돌림. |
+| 시나리오 14 (음성 끄기) | 확인. 끄면 `silent event=... reason=voice-off` 로 소리 없이 말풍선만. 앱을 껐다 켜도 꺼진 상태 유지. 제한 있음에서 스위치를 눌러도 상태가 안 바뀌고, 제한을 풀어도 그대로. |
+| 시나리오 15, 16 | **미확인**. 에뮬레이터 부하(load 10~20)로 탭이 반영되지 않았다. HOME 키는 멀티 윈도우 때문에 앱을 가리지 못한다(`Activity not started ... top-most instance`). |
+
+환경 메모: 재부팅 직후나 `caas` 를 켜고 끈 직후 몇 분간 load 가 10~20 으로 올라가고, 이때 `link=CONNECTING` 에서 앱이 멈추거나 ANR(`Waited 5001ms for FocusEvent`)이 났다(04:14, 04:19). 04:14 건은 TTS 를 끄기 전이라 TTS 와 무관하다. 부하가 3 이하일 때는 같은 조건에서 정상이었다. 다만 차량 서비스가 느릴 때 앱 메인 스레드가 막히는지는 **확인 필요**(연결을 메인에서 기다리는 코드가 있는지 점검 대상).
+
+## 시나리오 12 재확인: 포커스 재요청 수정 후 (2026-11-15, 헤드리스 에뮬레이터)
+
+- 변경: `AndroidAudioFocusGateway` 가 요청마다 새 리스너를 쓰고, 거절 시 시스템이 돌려준 값을 `focus request result=N` 으로 남긴다.
+- 방법: 데모 모드, 제한 없음, 말하기 버튼을 0.3~0.4초 간격으로 4~5번씩 3회 눌렀다.
+- 결과: 반납 직후 재요청 5번이 모두 `granted=true`. `NO_FOCUS` 와 `focus request result=` 는 나오지 않았다. 수정 전에는 같은 조작에서 `granted=false` → `NO_FOCUS` 가 났다.
+- 한계: 수정 전 거절의 원인은 재현하지 못해 확정하지 않았다(가설: 같은 리스너로 반납 직후 재요청). 간헐 현상이었다면 3회로는 배제할 수 없다. [확인 필요]
+- 관찰: 연속으로 누른 4번째 이후 이벤트는 말하지 않고 로그도 없다(쿨다운 또는 규칙에 의한 건너뜀으로 보이나 이유가 로그에 없다). [확인 필요]
+- 관찰: 이번에는 마지막 말이 3~5초 만에 끝나고(`focus abandon`), `watchdog timeout` 은 없었다. 에뮬레이터 TTS 의 끝 콜백이 오는지는 일관되지 않아 실기기에서 확인한다. [확인 필요]
+- 환경: 내비 앱이 CPU 를 계속 써서 부하가 12 안팎이었지만 이번 조작은 정상 반영됐다.

@@ -27,7 +27,9 @@ internal class AndroidAudioFocusGateway(
 
     private var request: AudioFocusRequest? = null
 
-    private val listener = AudioManager.OnAudioFocusChangeListener { change ->
+    // 요청마다 새 리스너를 쓴다. 같은 리스너로 반납 직후 다시 요청하면 시스템이 같은 클라이언트로 보고 거절한 것으로
+    // 의심된다(에뮬레이터 시나리오 12). 원인은 확정하지 못했다 [확인 필요].
+    private fun newListener() = AudioManager.OnAudioFocusChangeListener { change ->
         val mapped = when (change) {
             AudioManager.AUDIOFOCUS_GAIN -> FocusChange.GAIN
             AudioManager.AUDIOFOCUS_LOSS -> FocusChange.LOSS
@@ -42,16 +44,17 @@ internal class AndroidAudioFocusGateway(
         requestCount++
         val req = AudioFocusRequest.Builder(gain)
             .setAudioAttributes(attributes)
-            .setOnAudioFocusChangeListener(listener)
+            .setOnAudioFocusChangeListener(newListener())
             .build()
         request = req
-        val granted = try {
-            audioManager.requestAudioFocus(req) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        return try {
+            val result = audioManager.requestAudioFocus(req)
+            if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) log("focus request result=$result") // 1=GRANTED 0=FAILED 2=DELAYED
+            result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
         } catch (e: Throwable) {
             log("focus request failed: ${e.javaClass.simpleName}")
             false
         }
-        return granted
     }
 
     override fun abandon() {
