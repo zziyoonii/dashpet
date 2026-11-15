@@ -68,7 +68,9 @@ specs/002-pet-view/
 │   └── pet-view-api.md
 ├── checklists/
 │   ├── requirements.md
-│   └── visual-parity.md # 시안과 나란히 비교하는 승인 체크리스트
+│   ├── visual-parity.md # 시안과 나란히 비교하는 승인 체크리스트
+│   ├── traceability.md  # FR/SC 를 테스트와 확인 항목에 연결
+│   └── verification-log.md # 에뮬레이터 확인 기록
 └── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
 ```
 
@@ -91,10 +93,12 @@ pet/src/main/java/com/example/dashpet/pet/
 ├── PetPhysics.kt                # 좌우, 앞뒤, 점프 축과 반응 (순수 Kotlin)
 ├── Particles.kt                 # 파티클 풀(상한), 종류
 ├── PetPose.kt                   # 정적 포즈 계산 (순수 Kotlin)
+├── PetGeometry.kt               # 한 프레임의 몸 기하(컨트롤러와 페인터가 같이 씀)
 ├── MotionPolicy.kt              # 프레임 루프 실행 조건, 모션 줄이기 보정
 ├── PetController.kt             # PetOutput, DrivingEvent → 물리 명령, 정적/풀 전환
 ├── PetPainter.kt                # 아래 페인터를 순서대로 호출하는 조정 함수
-├── BackgroundPainter.kt         # 배경, 격자, 바닥, 패널, 벽 접촉 빛
+├── PaintUtil.kt                 # 색 혼합, rgba, 둥근 다각형, 글로우 선 등 그리기 도구
+├── BackgroundPainter.kt         # 배경(배경 감정별 색), 격자, 바닥, 패널, 벽 접촉 빛
 ├── BodyPainter.kt               # 몸 경로, 그라데이션, 유리 번짐, 눌린 자국, 속도선
 ├── FacePainter.kt               # 눈(헤드라이트), 눈썹(LED), 입, 볼터치, 윙크
 ├── EffectsPainter.kt            # 파티클, 유리 반사광과 자국
@@ -106,8 +110,7 @@ pet/src/test/java/com/example/dashpet/pet/
 ├── SoftBodyTest.kt
 ├── PetPhysicsTest.kt
 ├── ParticlesTest.kt
-├── PetPoseTest.kt
-├── PetPoseAmbientTest.kt
+├── PetPoseTest.kt                 # 정적 포즈와 배경 감정(우비) 포함
 ├── ParticlesAmbientTest.kt
 ├── MotionPolicyTest.kt
 ├── PetPaletteTest.kt

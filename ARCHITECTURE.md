@@ -50,10 +50,31 @@ Pleos Connect(AAOS) 위에서 도는 Activity 기반 멀티 윈도우 앱. 캐�
 | `EngineCore.kt` | 위를 묶는 동기 코어(`process`, `advanceTo`, `currentTrip`, `completedTrips`) |
 | `DrivingEngine.kt` | 코루틴 래퍼(`output: StateFlow<PetOutput>`, `events: SharedFlow<DrivingEvent>`) |
 
+## `:pet` 구성 (002-pet-view)
+
+`:pet` 은 `:engine` 의 출력(`PetOutput`)과 이벤트(`DrivingEvent`)를 받아 펫을 그린다. 판단은 하지 않는다(모션 등급은 `:engine` 이 정한다).
+
+| 계층 | 파일 | 역할 |
+|-|-|-|
+| 물리 | `SoftBody.kt`, `PetPhysics.kt`, `PetPhysicsConfig.kt` | 몸 22점 소프트바디, 쏠림/번짐/점프/숨쉬기, 크기 배율 용수철. 상수는 `PetPhysicsConfig` 한 곳(시안 값, 초안은 `[확인 필요]`) |
+| 컨트롤러 | `PetController.kt`, `PetGeometry.kt`, `Particles.kt`, `PetPose.kt` | 엔진 출력을 받아 풀/정적 모드를 정하고 물리와 파티클을 진행, 그릴 상태(`PetRenderState`) 제공. 윙크, 배경 감정, 정적 포즈(`petPose`) |
+| 페인터 | `PetPainter.kt`(풀), `StaticPainter.kt`(정적), `BodyPainter.kt`, `FacePainter.kt`, `EffectsPainter.kt`, `BackgroundPainter.kt`, `PaintUtil.kt`, `PetPalette.kt` | 상태를 읽기만 하고 그린다. 난수와 시계를 읽지 않는다 |
+| 뷰 | `PetView.kt`, `MotionPolicy.kt` | Compose 진입점. 프레임 루프(`withFrameNanos`)는 여기에만 있고 `STARTED` 이면서 풀 모션일 때만 돈다. 이름 라벨(14sp)을 왼쪽 위에 표시 |
+
+핵심 규칙:
+
+- **정적은 그리기만 한다.** 정적(`STATIC`, `ONE_SHOT`, 알 수 없는 등급)에서는 프레임 루프, 물리, 파티클, 터치 처리가 없고 입력이 바뀔 때만 다시 그린다.
+- **`Tick` 규칙**: 시계는 `step(dt)` 의 `dt` 누적(`PetPhysicsState.clockSec`)뿐이다. `System.currentTimeMillis` 등 벽시계를 쓰지 않고 난수는 주입된 `Random` 만 쓴다(같은 시드와 같은 호출이면 같은 결과). `dt` 는 1/30 초로 자르고, 루프 첫 프레임은 0 이다.
+- **`injectRestriction`**(`:engine`) 은 데모 화면 전용이다. 제품 경로(실차 신호)에서는 쓰지 않는다. 실차에서는 플랫폼의 주행 제한이 모션 등급을 정한다.
+- **엔진 감정이 우선**: 배경 감정(`setAmbient`)은 엔진 감정이 편안일 때만 보인다. 정적에서는 비의 우비만 그린다.
+- 윙크는 `winkClosed(side)`(380ms 주기, 켜진 순간부터 계산), 모션 줄이기에서도 유지한다.
+
+데모 화면(`:app`)은 `DemoViewModel` 이 `MockSignalSource` 의 시나리오를 재생하고, 수동 제한 토글(`injectRestriction`)과 확인용 패널(`DemoControls`)을 제공한다.
+
 ## 테스트 실행
 
 ```bash
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew :signal:testDebugUnitTest :engine:testDebugUnitTest --console=plain
+./gradlew :signal:testDebugUnitTest :engine:testDebugUnitTest :pet:testDebugUnitTest :app:testDebugUnitTest --console=plain
 ```
 

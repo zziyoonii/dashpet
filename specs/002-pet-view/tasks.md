@@ -179,12 +179,12 @@ description: "PetView 구현 작업 목록"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T053 [P] [US4] `pet/src/test/.../PetControllerWinkTest.kt`: 풀 모션에서 `turnSignal == RIGHT` 이면 화면 기준 오른쪽 눈이 `floor((clock − start) / 0.38) % 2 == 0` 일 때 감김(380ms 주기), `LEFT` 는 왼쪽 눈, `OFF` 가 되면 윙크가 즉시 사라짐, 다른 쪽 눈은 현재 감정 그대로, 모션 줄이기에서도 윙크는 유지, 시계는 `step` 으로만 진행(결정적).
+- [X] T053 [P] [US4] `pet/src/test/.../PetControllerWinkTest.kt`: 풀 모션에서 `turnSignal == RIGHT` 이면 화면 기준 오른쪽 눈이 `floor((clock − start) / 0.38) % 2 == 0` 일 때 감김(380ms 주기), `LEFT` 는 왼쪽 눈, `OFF` 가 되면 윙크가 즉시 사라짐, 다른 쪽 눈은 현재 감정 그대로, 모션 줄이기에서도 윙크는 유지, 시계는 `step` 으로만 진행(결정적).
 
 ### Implementation for User Story 4
 
-- [ ] T054 [US4] `pet/src/main/.../PetController.kt` 에 윙크 상태(`winkClosed(side)`)를 추가한다(T053 을 통과시킴).
-- [ ] T055 [US4] `pet/src/main/.../FacePainter.kt` 에 풀 모션 윙크를 그린다: 감은 눈은 호박색이 섞인 ^ 모양 빛(`#FFE2A0`, 글로우 `#FFB020`), 그 눈의 눈썹은 호박색(`#FFB020`)(T054 의존). `PetPreviews.kt` 에 윙크 프리뷰를 추가한다.
+- [X] T054 [US4] `pet/src/main/.../PetController.kt` 에 윙크 상태(`winkClosed(side)`)를 추가한다(T053 을 통과시킴).
+- [X] T055 [US4] `pet/src/main/.../FacePainter.kt` 에 풀 모션 윙크를 그린다: 감은 눈은 호박색이 섞인 ^ 모양 빛(`#FFE2A0`, 글로우 `#FFB020`), 그 눈의 눈썹은 호박색(`#FFB020`)(T054 의존). `PetPreviews.kt` 에 윙크 프리뷰를 추가한다.
 
 **Checkpoint**: 풀 모션과 정적 모두 윙크가 동작한다.
 
@@ -198,15 +198,15 @@ description: "PetView 구현 작업 목록"
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T056 [P] [US5] `pet/src/test/.../PetPaletteTest.kt`: 색 혼합(`mix`), 휘도(`lum = (0.299R + 0.587G + 0.114B) / 255`), 윤곽선 알파 규칙(`lum < 0.3` 이면 0.28, 아니면 0.2), 대비율 계산(`contrastRatio`)과 이름 라벨 색이 배경 대비 4.5:1 이상.
-- [ ] T057 [P] [US5] `pet/src/test/.../PetControllerAppearanceTest.kt`: `LIVELY` 의 기쁨 점프 초기 속도 820 이 `STURDY` 의 650 보다 높음, 두 번째 점프 620/480, `CUTE` 는 볼터치 플래그가 항상 켜짐, 외형이 없으면 기본 외형, 외형 변경이 물리 상태를 건드리지 않음.
+- [X] T056 [P] [US5] `pet/src/test/.../PetPaletteTest.kt`: 색 혼합(`mix`), 휘도(`lum = (0.299R + 0.587G + 0.114B) / 255`), 윤곽선 알파 규칙(`lum < 0.3` 이면 0.28, 아니면 0.2), 대비율 계산(`contrastRatio`)과 이름 라벨 색이 배경 대비 4.5:1 이상.
+- [X] T057 [P] [US5] `pet/src/test/.../PetControllerAppearanceTest.kt`: `LIVELY` 의 기쁨 점프 초기 속도 820 이 `STURDY` 의 650 보다 높음, 두 번째 점프 620/480, `CUTE` 는 볼터치 플래그가 항상 켜짐, 외형이 없으면 기본 외형, 외형 변경이 물리 상태를 건드리지 않음.
 
 ### Implementation for User Story 5
 
-- [ ] T058 [US5] `pet/src/main/.../PetPalette.kt` 에 `mix`, `lum`, `contrastRatio` 를 추가한다(T056 을 통과시킴).
-- [ ] T059 [US5] `pet/src/main/.../PetController.kt` 에 성격 효과를 추가한다: `LIVELY` 점프 속도, `CUTE` 볼터치 플래그(T057 을 통과시킴, T058 의존).
-- [ ] T060 [US5] `pet/src/main/.../BodyPainter.kt`, `FacePainter.kt`, `StaticPainter.kt` 에서 몸 그라데이션(밝은 혼합 0.32 → 몸 색 → 어두운 혼합 0.3), 광택, 윤곽선 알파, 볼터치(애교 항상, 기쁨 0.4/0.3 알파)를 외형 값으로 계산하도록 연결한다(T058, T059 의존).
-- [ ] T061 [US5] `pet/src/main/.../PetView.kt` 에 이름 `Text`(14sp, 대비 4.5:1 이상)를 표시한다. 이름이 비어 있으면 기본 이름을 쓴다(T058 의존).
+- [X] T058 [US5] `pet/src/main/.../PetPalette.kt` 에 `mix`, `lum`, `contrastRatio` 를 추가한다(T056 을 통과시킴).
+- [X] T059 [US5] `pet/src/main/.../PetController.kt` 에 성격 효과를 추가한다: `LIVELY` 점프 속도, `CUTE` 볼터치 플래그(T057 을 통과시킴, T058 의존).
+- [X] T060 [US5] `pet/src/main/.../BodyPainter.kt`, `FacePainter.kt`, `StaticPainter.kt` 에서 몸 그라데이션(밝은 혼합 0.32 → 몸 색 → 어두운 혼합 0.3), 광택, 윤곽선 알파, 볼터치(애교 항상, 기쁨 0.4/0.3 알파)를 외형 값으로 계산하도록 연결한다(T058, T059 의존).
+- [X] T061 [US5] `pet/src/main/.../PetView.kt` 에 이름 `Text`(14sp, 대비 4.5:1 이상)를 표시한다. 이름이 비어 있으면 기본 이름을 쓴다(T058 의존).
 
 **Checkpoint**: 외형이 반영된다.
 
@@ -220,16 +220,16 @@ description: "PetView 구현 작업 목록"
 
 ### Tests for User Story 7 ⚠️
 
-- [ ] T062 [P] [US7] `pet/src/test/.../PetControllerAmbientTest.kt`: `setAmbient` 가 풀 모션에서 감정 목표 스케일을 바꿈(더위 1.24/0.74, 추위 0.94/0.95, 깜짝 0.86/0.90, 조용 1.06/(0.9 + 0.02·호흡)), 엔진 감정이 `IDLE` 일 때만 배경 감정이 보이고 다른 감정이 우선, 눈 깜빡임은 편안과 비에서만, 정적에서는 영향 없음(비 제외), `setAmbient(null)` 로 해제.
-- [ ] T063 [P] [US7] `pet/src/test/.../ParticlesAmbientTest.kt`: 풀 모션에서 더위는 땀, 비는 빗줄기(주차 상태에서 초당 약 55개), 조용은 Z, 추위는 입김을 생성, 정적과 모션 줄이기에서는 생성하지 않음, 상한 60.
-- [ ] T064 [P] [US7] `pet/src/test/.../PetPoseAmbientTest.kt`: 정적에서 비는 `hood == true`, 더위/추위/조용은 별도 표현 없음(기본 포즈와 같음), 엔진 감정이 우선.
+- [X] T062 [P] [US7] `pet/src/test/.../PetControllerAmbientTest.kt`: `setAmbient` 가 풀 모션에서 감정 목표 스케일을 바꿈(더위 1.24/0.74, 추위 0.94/0.95, 깜짝 0.86/0.90, 조용 1.06/(0.9 + 0.02·호흡)), 엔진 감정이 `IDLE` 일 때만 배경 감정이 보이고 다른 감정이 우선, 눈 깜빡임은 편안과 비에서만, 정적에서는 영향 없음(비 제외), `setAmbient(null)` 로 해제.
+- [X] T063 [P] [US7] `pet/src/test/.../ParticlesAmbientTest.kt`: 풀 모션에서 더위는 땀, 비는 빗줄기(주차 상태에서 초당 약 55개), 조용은 Z, 추위는 입김을 생성, 정적과 모션 줄이기에서는 생성하지 않음, 상한 60.
+- [X] T064 [P] [US7] `pet/src/test/.../PetPoseAmbientTest.kt`: 정적에서 비는 `hood == true`, 더위/추위/조용은 별도 표현 없음(기본 포즈와 같음), 엔진 감정이 우선.
 
 ### Implementation for User Story 7
 
-- [ ] T065 [US7] `pet/src/main/.../PetController.kt` 에 `setAmbient` 와 배경 감정 처리(목표 스케일, 깜빡임 규칙)를 추가한다(T062 를 통과시킴).
-- [ ] T066 [P] [US7] `pet/src/main/.../Particles.kt` 에 배경 감정 생성기를 추가한다(T063 을 통과시킴).
-- [ ] T067 [P] [US7] `pet/src/main/.../PetPose.kt` 에 배경 감정(비의 우비)을 추가한다(T064 를 통과시킴).
-- [ ] T068 [US7] `BodyPainter.kt`, `FacePainter.kt`, `BackgroundPainter.kt` 에 배경 감정 표현을 그린다: 더위(낮고 넓게 녹음, 땀, 바닥 방울, 반쯤 감긴 눈, 처진 눈썹, 헐떡임), 추위(덜덜 떪, 서리, 입김, 지그재그 입), 비(노란 우비, 빗줄기, 배경 색조), 조용(눈 감은 선, 눈썹 꺼짐, Zzz)(T065 의존). `PetPreviews.kt` 에 배경 감정 프리뷰를 추가한다.
+- [X] T065 [US7] `pet/src/main/.../PetController.kt` 에 `setAmbient` 와 배경 감정 처리(목표 스케일, 깜빡임 규칙)를 추가한다(T062 를 통과시킴).
+- [X] T066 [P] [US7] `pet/src/main/.../Particles.kt` 에 배경 감정 생성기를 추가한다(T063 을 통과시킴).
+- [X] T067 [P] [US7] `pet/src/main/.../PetPose.kt` 에 배경 감정(비의 우비)을 추가한다(T064 를 통과시킴).
+- [X] T068 [US7] `BodyPainter.kt`, `FacePainter.kt`, `BackgroundPainter.kt` 에 배경 감정 표현을 그린다: 더위(낮고 넓게 녹음, 땀, 바닥 방울, 반쯤 감긴 눈, 처진 눈썹, 헐떡임), 추위(덜덜 떪, 서리, 입김, 지그재그 입), 비(노란 우비, 빗줄기, 배경 색조), 조용(눈 감은 선, 눈썹 꺼짐, Zzz)(T065 의존). `PetPreviews.kt` 에 배경 감정 프리뷰를 추가한다.
 
 **Checkpoint**: 모든 스토리가 동작한다.
 
@@ -237,16 +237,16 @@ description: "PetView 구현 작업 목록"
 
 ## Phase 10: Polish & Cross-Cutting Concerns
 
-- [ ] T069 [P] `ARCHITECTURE.md` 를 갱신한다: `:pet` 구성(물리/컨트롤러/페인터/뷰), `Tick` 규칙, `injectRestriction`(제품 경로 사용 금지), 데모 화면.
-- [ ] T070 [P] `specs/002-pet-view/checklists/traceability.md` 에 FR-001~FR-021 과 SC-001~SC-009 를 테스트 이름, `visual-parity.md` 항목, `quickstart.md` A~J 로 연결한 표를 만든다(빠진 항목이 있으면 테스트를 추가).
-- [ ] T071 헌장 점검(grep): `pet/src/main` 에서 `rememberInfiniteTransition`, `animate*AsState`, `Animatable`, `InfiniteTransition`, `Handler`, `Timer` 를 쓰지 않았는지, `withFrameNanos` 가 `PetView` 의 루프 한 곳에만 있는지, `System.currentTimeMillis`, `System.nanoTime`, `Date` 를 쓰지 않았는지(물리 시계는 `dt` 누적), `ai.pleos` 와 `:signal` 구현체 import 가 없는지 확인한다. `engine/src/main`, `signal/src/main` 의 001 점검(벽시계, `android.`, `ai.pleos`)도 다시 확인한다.
-- [ ] T072 `./gradlew assembleDebug :signal:testDebugUnitTest :engine:testDebugUnitTest :pet:testDebugUnitTest :app:testDebugUnitTest --console=plain` 을 실행하고 JUnit XML 로 모듈별 테스트 개수와 실패 0, 001 회귀(기존 145개) 통과를 확인한다.
+- [X] T069 [P] `ARCHITECTURE.md` 를 갱신한다: `:pet` 구성(물리/컨트롤러/페인터/뷰), `Tick` 규칙, `injectRestriction`(제품 경로 사용 금지), 데모 화면.
+- [X] T070 [P] `specs/002-pet-view/checklists/traceability.md` 에 FR-001~FR-021 과 SC-001~SC-009 를 테스트 이름, `visual-parity.md` 항목, `quickstart.md` A~J 로 연결한 표를 만든다(빠진 항목이 있으면 테스트를 추가).
+- [X] T071 헌장 점검(grep): `pet/src/main` 에서 `rememberInfiniteTransition`, `animate*AsState`, `Animatable`, `InfiniteTransition`, `Handler`, `Timer` 를 쓰지 않았는지, `withFrameNanos` 가 `PetView` 의 루프 한 곳에만 있는지, `System.currentTimeMillis`, `System.nanoTime`, `Date` 를 쓰지 않았는지(물리 시계는 `dt` 누적), `ai.pleos` 와 `:signal` 구현체 import 가 없는지 확인한다. `engine/src/main`, `signal/src/main` 의 001 점검(벽시계, `android.`, `ai.pleos`)도 다시 확인한다.
+- [X] T072 `./gradlew assembleDebug :signal:testDebugUnitTest :engine:testDebugUnitTest :pet:testDebugUnitTest :app:testDebugUnitTest --console=plain` 을 실행하고 JUnit XML 로 모듈별 테스트 개수와 실패 0, 001 회귀(기존 145개) 통과를 확인한다.
 - [ ] T073 `quickstart.md` 2번 A~J 를 에뮬레이터에서 확인하고 결과(특히 D 정적 프레임 수, E fps)를 `specs/002-pet-view/checklists/verification-log.md` 에 기록한다. 에뮬레이터가 없으면 확인하지 못한 항목과 이유를 명시한다.
 - [ ] T074 `checklists/visual-parity.md` 를 시안과 나란히 놓고 채우고, 정적 포즈 초안 값(기울기, 배율, 색 혼합)을 기획자와 확정한다. 시안과 다르게 두기로 한 항목과 이유를 기록하고 기획자 승인을 받는다(SC-001).
 - [ ] T075 데모 영상용으로 `quickstart.md` 2번 B, H 를 3회 반복해 매번 같은 이벤트 순서와 반응이 나오는지 확인한다(촬영 반복 가능, SC-009).
-- [ ] T076 `specs/002-pet-view/research.md` 의 미결 항목 4건(정적 포즈 값, 에뮬레이터 성능, 데모 급커브 모양, 글로우 근사)을 결과에 맞춰 갱신한다.
-- [ ] T077 `specs/002-pet-view/plan.md` 의 구조 목록이 최종 파일 구성과 일치하는지 확인하고, 다르면 갱신한다.
-- [ ] T078 변경을 스토리 단위로 커밋한다(브랜치 `002-pet-view`). 푸시는 요청이 있을 때만 한다.
+- [X] T076 `specs/002-pet-view/research.md` 의 미결 항목 4건(정적 포즈 값, 에뮬레이터 성능, 데모 급커브 모양, 글로우 근사)을 결과에 맞춰 갱신한다.
+- [X] T077 `specs/002-pet-view/plan.md` 의 구조 목록이 최종 파일 구성과 일치하는지 확인하고, 다르면 갱신한다.
+- [X] T078 변경을 스토리 단위로 커밋한다(브랜치 `002-pet-view`). 푸시는 요청이 있을 때만 한다.
 
 ---
 
