@@ -3,11 +3,18 @@ package com.example.dashpet.pet
 import android.animation.ValueAnimator
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -31,15 +38,18 @@ import kotlinx.coroutines.flow.collectLatest
  *   백그라운드로 가면 루프가 취소되어 시간이 멈추고, 돌아오면 첫 프레임 `dt = 0` 으로 다시 시작한다.
  * - `STARTED` 에 들어올 때마다 시스템의 모션 줄이기 설정(`ValueAnimator.areAnimatorsEnabled()`)을 다시 읽는다.
  * - 정적 모드에서는 루프, 애니메이터, 타이머, 터치 처리가 없고 컨트롤러의 상태가 바뀔 때만 다시 그린다.
- * 이름은 캔버스 안이 아니라 Compose 텍스트(14sp, 대비 4.5:1 이상)로 왼쪽 위에 표시한다(아래쪽은 확인용 패널이, 위 가운데는 말풍선이 쓴다)(R15, FR-016). 비어 있으면 기본 이름이다.
+ * 이름은 캔버스 안이 아니라 Compose 텍스트("펫 이름: ○○", 48sp, 대비 4.5:1 이상)로 왼쪽 위에 표시한다(아래쪽은 확인용 패널이, 위 가운데는 말풍선이 쓴다)(R15, FR-016). 비어 있으면 기본 이름이다.
  */
 @Composable
 fun PetView(
     controller: PetController,
     appearance: PetAppearance,
     modifier: Modifier = Modifier,
+    aboveSlot: (@Composable BoxScope.() -> Unit)? = null,
 ) {
     val density = LocalDensity.current.density
+    var heightDp by remember { mutableStateOf(0f) }
+    var widthDp by remember { mutableStateOf(0f) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     SideEffect { controller.setAppearance(appearance) }
 
@@ -56,14 +66,27 @@ fun PetView(
         Canvas(
             Modifier
                 .matchParentSize()
-                .onSizeChanged { controller.setViewport(it.width / density, it.height / density) },
+                .onSizeChanged {
+                    widthDp = it.width / density
+                    heightDp = it.height / density
+                    controller.setViewport(widthDp, heightDp)
+                },
         ) {
             drawPet(controller.renderState)
         }
+        // 가만히 있을 때 펫 몸의 위쪽 끝(논리 좌표). 말풍선 같은 위쪽 내용은 이 선 바로 위에 아래 정렬로 놓는다.
+        // 뛰거나 눌릴 때는 펫이 움직이지만 말풍선은 제자리에 둔다(말풍선이 흔들리지 않게).
+        if (aboveSlot != null && heightDp > 0f) {
+            val restTopDp = restBodyTopDp(widthDp, heightDp, PetPhysicsConfig())
+            Box(
+                Modifier.align(Alignment.TopCenter).fillMaxWidth().height(restTopDp.dp).padding(bottom = 16.dp),
+                contentAlignment = Alignment.BottomCenter,
+            ) { aboveSlot() }
+        }
         BasicText(
-            text = appearance.displayName,
-            modifier = Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 8.dp),
-            style = TextStyle(color = PetPalette.NameLabel, fontSize = 14.sp),
+            text = "펫 이름: ${appearance.displayName}",
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 16.dp),
+            style = TextStyle(color = PetPalette.NameLabel, fontSize = 48.sp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -82,4 +105,10 @@ private suspend fun runFrameLoop(controller: PetController) {
             controller.step(dt)
         }
     }
+}
+
+/** 가만히 서 있을 때(정차) 펫 몸의 위쪽 끝 높이. [petGeometry] 의 `cy - ry` 와 같다(기본 상태: 눌림, 기울기, 오프셋 없음). */
+internal fun restBodyTopDp(widthDp: Float, heightDp: Float, config: PetPhysicsConfig): Float {
+    val g = petGeometry(PetPhysicsState(SoftBody()), widthDp, heightDp, config)
+    return (g.cy - g.ry).coerceAtLeast(0f)
 }

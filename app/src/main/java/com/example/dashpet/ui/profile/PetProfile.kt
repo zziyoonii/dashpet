@@ -56,7 +56,7 @@ object ProfileRules {
 
 data class NamedColor(val name: String, val argb: Long)
 
-/** 온보딩에서 고르는 몸 색. 외형은 색만 고른다(차종 실루엣은 다음 단계). */
+/** 온보딩에서 고르는 펫 색. 외형은 색만 고른다(차종 실루엣은 다음 단계). */
 object OnboardingPalette {
     /** 시안 기본색 #4F7CFF. */
     const val DEFAULT_ARGB = 0xFF4F7CFFL

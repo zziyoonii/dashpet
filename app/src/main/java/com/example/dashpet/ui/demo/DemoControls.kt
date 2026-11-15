@@ -2,18 +2,22 @@ package com.example.dashpet.ui.demo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,15 +52,18 @@ private fun modeName(mode: SignalMode): String = when (mode) {
 }
 
 private fun restrictionName(state: RestrictionState): String = when (state) {
-    RestrictionState.NONE -> "없음"
-    RestrictionState.ACTIVE -> "있음"
-    RestrictionState.UNKNOWN -> "알 수 없음"
+    RestrictionState.NONE -> "제한 해제 (움직임)"
+    RestrictionState.ACTIVE -> "제한 걸림 (정적)"
+    RestrictionState.UNKNOWN -> "신호 끊김 (정적)"
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 /**
- * 모드 선택, 데모 컨트롤, 확인용 패널. [DemoState.debugAvailable] 이 거짓이면 아무것도 그리지 않는다.
- * 실차 모드에서는 재생과 수동 제한을 숨기고 신호 진단을 보인다(수동 제한이 실차 상태를 덮어쓸 수 없다, FR-016).
+ * 디버그 빌드의 시연 컨트롤. [DemoState.debugAvailable] 이 거짓이면 아무것도 그리지 않는다. 영역 전체를 덮는 [Box] 라서
+ * 호출하는 쪽이 크기와 여백을 정한다(터치는 버튼만 받는다).
+ * - 오른쪽 위: "실차 데이터 보기/숨기기"와 "패널 숨기기/보기" 버튼. 항상 보인다.
+ * - 오른쪽: 컨트롤 패널(화면 모드, 시나리오, 날씨 반응, 주행 제한 상태, 설정). 펫을 가리지 않게 옆에 둔다.
+ * - 아래 가운데: 실차 데이터(감정, 모션 등급, 시나리오 시간 또는 신호 진단). 컨트롤 패널과 따로 열고 닫는다.
+ * 실차 모드에서는 재생과 수동 제한을 숨긴다(수동 제한이 실차 상태를 덮어쓸 수 없다, FR-016).
  */
 @Composable
 fun DemoControls(
@@ -76,103 +83,80 @@ fun DemoControls(
     onRename: () -> Unit = {},
 ) {
     if (!demo.debugAvailable) return
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(PetPalette.Panel)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            // 모드 선택: 선택된 칩은 채워지고 "✓" 가 붙는다(색만으로 구분하지 않음).
-            SignalMode.entries.forEach { mode ->
-                val selected = demo.mode == mode
-                val label = (if (selected) "✓ " else "") + modeName(mode)
-                if (selected) {
-                    Button(
-                        onClick = { onMode(mode) },
-                        colors = ButtonDefaults.buttonColors(containerColor = PetPalette.Ink, contentColor = PetPalette.Bg),
-                    ) { Text(label, fontSize = 14.sp) }
-                } else {
-                    OutlinedButton(
-                        onClick = { onMode(mode) },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PetPalette.Ink),
-                    ) { Text(label, fontSize = 14.sp) }
-                }
-            }
-            // 음성 켜기/끄기. 제한이 있거나 알 수 없으면 바꿀 수 없다(비활성, FR-016).
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text("음성", color = PetPalette.Ink, fontSize = 14.sp)
-                Switch(checked = voiceEnabled, onCheckedChange = onVoiceEnabled, enabled = output.tier == MotionTier.FULL)
-            }
-            OutlinedButton(
-                onClick = onRename,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = PetPalette.Ink),
-            ) { Text("이름 짓기", fontSize = 14.sp) }
-            if (demo.mode == SignalMode.DEMO) {
-                AmbientChips(ambient, onAmbient)
-                Button(
-                    onClick = onTogglePlay,
-                    colors = ButtonDefaults.buttonColors(containerColor = PetPalette.Accent, contentColor = PetPalette.Bg),
-                ) {
-                    Text(if (demo.playback == PlaybackState.PLAYING) "정지" else "재생", fontSize = 14.sp)
-                }
-                // 확인용: 이벤트를 하나씩 돌아가며 말하게 한다. 제한 상태는 아래 칩으로 정한다.
-                OutlinedButton(
-                    onClick = onDebugSpeak,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PetPalette.Ink),
-                ) { Text("말하기", fontSize = 14.sp) }
-                // 선택 상태 표시: 선택된 버튼은 채워지고 "✓" 가 붙는다(색만으로 구분하지 않음).
-                RestrictionState.entries.forEach { state ->
-                    val selected = demo.manualRestriction == state
-                    val label = (if (selected) "✓ " else "") + "제한 " + restrictionName(state)
-                    if (selected) {
-                        Button(
-                            onClick = { onRestriction(state) },
-                            colors = ButtonDefaults.buttonColors(containerColor = PetPalette.Ink, contentColor = PetPalette.Bg),
-                        ) { Text(label, fontSize = 14.sp) }
-                    } else {
-                        OutlinedButton(
-                            onClick = { onRestriction(state) },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = PetPalette.Ink),
-                        ) { Text(label, fontSize = 14.sp) }
+    var open by rememberSaveable { mutableStateOf(true) }
+    Box(modifier) {
+        Row(Modifier.align(Alignment.TopEnd), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // [DemoState.debugPanelVisible] 는 이제 "실차 데이터" 영역을 보일지 정한다.
+            ControlChip(
+                label = if (demo.debugPanelVisible) "실차 데이터 숨기기" else "실차 데이터 보기",
+                onClick = { onPanelVisible(!demo.debugPanelVisible) },
+            )
+            ControlChip(label = if (open) "패널 숨기기" else "패널 보기", onClick = { open = !open })
+        }
+        if (open) {
+            ControlPanelFrame(Modifier.align(Alignment.TopEnd).padding(top = 72.dp)) {
+                ControlSection("화면 모드") {
+                    SignalMode.entries.forEach { mode ->
+                        ControlChip(modeName(mode), onClick = { onMode(mode) }, selected = demo.mode == mode)
                     }
+                }
+                if (demo.mode == SignalMode.DEMO) {
+                    ControlDivider()
+                    ControlSection("시나리오") {
+                        ControlChip(
+                            if (demo.playback == PlaybackState.PLAYING) "정지" else "재생",
+                            onClick = onTogglePlay,
+                            primary = true,
+                        )
+                        // 확인용: 이벤트를 하나씩 돌아가며 말하게 한다. 제한 상태는 아래 구역에서 정한다.
+                        ControlChip("말하기", onClick = onDebugSpeak)
+                    }
+                    ControlDivider()
+                    ControlSection("날씨 반응") { AmbientChips(ambient, onAmbient) }
+                    ControlDivider()
+                    ControlSection("주행 제한 상태 (확인용)") {
+                        RestrictionState.entries.forEach { state ->
+                            ControlChip(restrictionName(state), onClick = { onRestriction(state) }, selected = demo.manualRestriction == state)
+                        }
+                    }
+                }
+                ControlDivider()
+                ControlSection("설정") {
+                    // 음성 켜기/끄기. 제한이 있거나 알 수 없으면 바꿀 수 없다(비활성, FR-016).
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("음성", color = PetPalette.Ink, fontSize = 22.sp)
+                        Switch(checked = voiceEnabled, onCheckedChange = onVoiceEnabled, enabled = output.tier == MotionTier.FULL)
+                    }
+                    ControlChip("이름 짓기", onClick = onRename)
                 }
             }
         }
         if (demo.debugPanelVisible) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("감정: ${moodName(output.mood)}", color = PetPalette.Ink, fontSize = 14.sp)
-                Text("모션 등급: ${tierName(output.tier)}", color = PetPalette.Ink, fontSize = 14.sp)
-                if (demo.mode == SignalMode.DEMO) {
-                    Text("시나리오: ${formatDemoTime(demo.elapsedMs, totalMs)}", color = PetPalette.Ink, fontSize = 14.sp)
-                } else {
-                    demo.diagnostics?.let { d ->
-                        // 줄마다 세로로 쌓으면 패널이 펫을 가린다. 가로로 나란히 두고 폭이 모자랄 때만 줄바꿈한다.
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                        ) {
-                            (signalDiagnosticLines(d) + extraSignalDiagnosticLines(d)).forEach { Text(it, color = PetPalette.Ink, fontSize = 14.sp) }
-                        }
-                    }
-                }
-                Row {
-                    OutlinedButton(
-                        onClick = { onPanelVisible(false) },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PetPalette.Ink),
-                    ) { Text("패널 숨기기", fontSize = 12.sp) }
-                }
-            }
+            DataArea(demo, output, totalMs, Modifier.align(Alignment.BottomCenter))
+        }
+    }
+}
+
+/** 실차 데이터 영역: 펫 아래쪽에 컨트롤 패널과 따로 띄운다. 줄마다 쌓으면 펫을 가리므로 가로로 나란히 두고 폭이 모자랄 때만 줄바꿈한다. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DataArea(demo: DemoState, output: PetOutput, totalMs: Long, modifier: Modifier = Modifier) {
+    FlowRow(
+        modifier
+            .heightIn(max = 220.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(PetPalette.Panel)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(28.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text("감정: ${moodName(output.mood)}", color = PetPalette.Ink, fontSize = 22.sp)
+        Text("모션 등급: ${tierName(output.tier)}", color = PetPalette.Ink, fontSize = 22.sp)
+        if (demo.mode == SignalMode.DEMO) {
+            Text("시나리오: ${formatDemoTime(demo.elapsedMs, totalMs)}", color = PetPalette.Ink, fontSize = 22.sp)
         } else {
-            Row {
-                OutlinedButton(
-                    onClick = { onPanelVisible(true) },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PetPalette.Ink),
-                ) { Text("패널 보기", fontSize = 12.sp) }
+            demo.diagnostics?.let { d ->
+                (signalDiagnosticLines(d) + extraSignalDiagnosticLines(d)).forEach { Text(it, color = PetPalette.Ink, fontSize = 22.sp) }
             }
         }
     }

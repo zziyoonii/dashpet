@@ -9,7 +9,7 @@ import com.example.dashpet.engine.EventType
 enum class SpeechTone { STURDY, LIVELY, CUTE }
 
 /**
- * 이벤트 10종 x 변형 2의 고정 문장(specs/004 contracts/speech.md 1절)을 말투 3종으로 갖춘 것.
+ * 이벤트 11종 x 변형 2의 고정 문장(specs/004 contracts/speech.md 1절)을 말투 3종으로 갖춘 것.
  * 점수, 이름, 위치, 숫자를 넣지 않는다. 문장 표현은 초안이며 바꿔도 `SpeechCatalogTest` 를 통과해야 한다.
  */
 class SpeechCatalog(private val lines: Map<EventType, List<SpeechLine>> = DEFAULT_LINES) {
@@ -40,6 +40,7 @@ class SpeechCatalog(private val lines: Map<EventType, List<SpeechLine>> = DEFAUL
         /** 듬직: 차분한 존댓말. */
         val DEFAULT_LINES: Map<EventType, List<SpeechLine>> = mapOf(
             EventType.TRIP_START to listOf(l("출발해요. 오늘도 안전하게 가요.", "안전하게 가요."), l("시동 걸었어요. 천천히 출발해요.", "천천히 출발해요.")),
+            EventType.SEATBELT_WARN to listOf(l("출발 전에 안전벨트부터 매요.", "벨트부터 매요."), l("벨트를 먼저 확인해요. 그다음 출발해요.", "벨트를 확인해요.")),
             EventType.SEATBELT_OK to listOf(l("안전벨트를 확인했어요.", "벨트 확인했어요."), l("벨트가 잘 채워졌어요.", "벨트 좋아요.")),
             EventType.HARD_ACCEL to listOf(l("출발이 조금 급했어요. 부드럽게 가요.", "부드럽게 가요."), l("가속이 빨랐어요. 천천히 밟아요.", "천천히 밟아요.")),
             EventType.HARD_BRAKE to listOf(l("급하게 멈췄어요. 거리를 더 두어요.", "거리를 두어요."), l("갑자기 멈췄어요. 여유를 가져요.", "여유를 가져요.")),
@@ -54,6 +55,7 @@ class SpeechCatalog(private val lines: Map<EventType, List<SpeechLine>> = DEFAUL
         /** 활발: 기운찬 반말. 짧은 문장은 느낌표 하나로 끝낸다. */
         val LIVELY_LINES: Map<EventType, List<SpeechLine>> = mapOf(
             EventType.TRIP_START to listOf(l("출발이다! 오늘도 신나게, 안전하게 가자!", "신나게 안전하게!"), l("시동 걸렸다! 씩씩하게 출발하자!", "씩씩하게 출발!")),
+            EventType.SEATBELT_WARN to listOf(l("잠깐! 벨트부터 매자! 그다음에 출발이야!", "벨트부터!"), l("앗, 벨트 아직이야! 딸깍 하고 출발하자!", "벨트 먼저!")),
             EventType.SEATBELT_OK to listOf(l("벨트 확인 완료! 좋았어, 출발 준비 끝!", "벨트 좋았어!"), l("딸깍 소리 들었어! 벨트 최고야!", "벨트 최고야!")),
             EventType.HARD_ACCEL to listOf(l("우와, 출발이 너무 빨랐어! 살살 가자!", "살살 가자!"), l("가속이 세다! 조금만 부드럽게 가자!", "부드럽게 가자!")),
             EventType.HARD_BRAKE to listOf(l("으앗, 급정거! 앞차랑 거리를 더 두자!", "거리를 두자!"), l("끼익! 갑자기 멈췄어! 여유를 갖자!", "여유를 갖자!")),
@@ -68,6 +70,7 @@ class SpeechCatalog(private val lines: Map<EventType, List<SpeechLine>> = DEFAUL
         /** 애교: 다정한 존댓말. 짧은 문장은 느낌표 하나로 끝낸다(물결표는 본문에만 쓴다). */
         val CUTE_LINES: Map<EventType, List<SpeechLine>> = mapOf(
             EventType.TRIP_START to listOf(l("출발이에요~ 오늘도 나랑 안전하게 가요!", "나랑 안전하게 가요!"), l("시동 걸었어요! 살살 출발해 줘요~", "살살 출발해요!")),
+            EventType.SEATBELT_WARN to listOf(l("벨트부터 매 줘요~ 그래야 같이 달려요!", "벨트부터요!"), l("앗, 벨트가 아직이에요~ 먼저 매 줘요!", "벨트 먼저요!")),
             EventType.SEATBELT_OK to listOf(l("벨트 매 줘서 고마워요~ 든든해요!", "고마워요, 든든해요!"), l("딸깍! 벨트 잘 맸네요, 잘했어요~", "벨트 잘했어요!")),
             EventType.HARD_ACCEL to listOf(l("앗, 몸이 확 쏠렸어요. 살살 밟아 줘요~", "살살 밟아 줘요!"), l("출발이 너무 빨라서 놀랐어요. 천천히요~", "천천히 가요!")),
             EventType.HARD_BRAKE to listOf(l("깜짝이야, 갑자기 멈췄어요. 여유 있게 가요~", "여유 있게 가요!"), l("앗, 급브레이크예요. 거리를 조금만 더 둬요~", "거리를 더 둬요!")),

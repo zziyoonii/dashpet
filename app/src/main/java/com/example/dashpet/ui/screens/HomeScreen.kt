@@ -7,6 +7,11 @@ import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import com.example.dashpet.pet.PetPalette
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -132,17 +137,23 @@ fun HomeScreen() {
         permissions.launch(missing.toTypedArray())
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        PetView(controller = controller, appearance = profile?.toAppearance() ?: PetAppearance(), modifier = Modifier.fillMaxSize())
-        // 말풍선은 위쪽에 둔다. 제한 중에도 전체 문장을 보이고(애니메이션 없음), 말풍선이 없으면 아무것도 그리지 않는다.
-        SpeechBubble(
-            state = bubble,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .safeDrawingPadding()
-                .padding(16.dp),
+    // 화면 가장자리에 여백을 두고, 그 안쪽을 둥근 테두리로 감싼다. 펫, 말풍선, 컨트롤, 리포트는 모두 테두리 안에 있다.
+    Box(modifier = Modifier.fillMaxSize().background(PetPalette.Bg).safeDrawingPadding().padding(16.dp)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(24.dp))
+            .border(2.dp, PetPalette.Muted.copy(alpha = 0.6f), RoundedCornerShape(24.dp)),
+    ) {
+        // 말풍선은 펫 바로 위에 둔다(PetView 가 펫 몸 위쪽 끝 위에 아래 정렬로 놓는다). 제한 중에도 전체 문장을 보이고(애니메이션 없음),
+        // 말풍선이 없으면 아무것도 그리지 않는다.
+        PetView(
+            controller = controller,
+            appearance = profile?.toAppearance() ?: PetAppearance(),
+            modifier = Modifier.fillMaxSize(),
+            aboveSlot = { SpeechBubble(state = bubble) },
         )
-        // 컨트롤은 아래쪽에 두고, 가로 화면에서는 폭을 제한한다. 내용이 많아지면 FlowRow 가 줄바꿈한다.
+        // 컨트롤은 테두리 안 전체를 덮는 영역이고, 패널은 오른쪽 위, 실차 데이터는 아래에 둔다(각각 버튼으로 열고 닫는다).
         DemoControls(
             demo = demo,
             output = output,
@@ -157,13 +168,7 @@ fun HomeScreen() {
             ambient = ambientMood,
             onAmbient = { ambient = it?.name },
             onRename = { if (output.tier == MotionTier.FULL) openOnboarding() },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .safeDrawingPadding()
-                .padding(8.dp)
-                .widthIn(max = 640.dp)
-                .fillMaxWidth()
-                .wrapContentHeight(),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
         )
         // 제출용 빌드의 작은 시연 컨트롤. 정차 중에만 보이고 제한이 걸리면 사라진다.
         ReleaseControls(
@@ -176,13 +181,7 @@ fun HomeScreen() {
             onAmbient = { ambient = it?.name },
             onVoiceEnabled = { viewModel.setVoiceEnabled(it) },
             onRename = openOnboarding,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .safeDrawingPadding()
-                .padding(8.dp)
-                .widthIn(max = 640.dp)
-                .fillMaxWidth()
-                .wrapContentHeight(),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
         )
         // 도착 리포트: P단 뒤 제한이 풀린 정차 중에만 보인다(제한이 걸리면 사라지고, 확인을 누르면 닫힌다).
         report?.let { r ->
@@ -191,10 +190,11 @@ fun HomeScreen() {
                     report = r,
                     petName = profile?.name ?: PetAppearance.DEFAULT_NAME,
                     onDismiss = viewModel::dismissReport,
-                    modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(16.dp), // 펫의 얼굴을 가리지 않게 위쪽에 둔다
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 96.dp, start = 16.dp, end = 16.dp), // 펫의 얼굴을 가리지 않게 위쪽에 둔다
                 )
             }
         }
+    }
     }
 }
 

@@ -51,6 +51,7 @@ class EngineCoreMotionTest {
     private fun ScenarioBuilder.trigger(type: EventType) {
         when (type) {
             EventType.TRIP_START -> Unit // 아래 prefix 의 주차 -> 주차 아님 이 만든다
+            EventType.SEATBELT_WARN -> Unit // 아래 triggerScenario 가 출발 전(주차 중)부터 경고를 켜 둔다
             EventType.SEATBELT_OK -> {
                 at(2_000) { warning(WarningType.SEATBELT, true) }
                 at(3_000) { warning(WarningType.SEATBELT, false) }
@@ -81,12 +82,13 @@ class EngineCoreMotionTest {
             parked(true)
             speed(0)
             brakePedal(false)
+            if (type == EventType.SEATBELT_WARN) warning(WarningType.SEATBELT, true) // 출발 순간 벨트 경고가 켜져 있다
         }
         at(1_000) { parked(false) }
         trigger(type)
     }
 
-    private val producible = EventType.entries.toList() // 10종 모두
+    private val producible = EventType.entries.toList() // 11종 모두
 
     @Test
     fun fullMotionNeverAppearsWhileRestrictedOrUnknown() {

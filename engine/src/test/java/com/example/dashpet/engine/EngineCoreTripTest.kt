@@ -109,6 +109,74 @@ class EngineCoreTripTest {
         assertEquals(EventType.TRIP_END, stopped.events.single().type)
     }
 
+    // ---- 출발 전 안전벨트 검문 ----
+
+    @Test
+    fun departureWithSeatbeltWarningOnSaysSeatbeltFirstThenOkWhenItTurnsOff() {
+        val steps = runScenario(
+            scenario("departure-check") {
+                at(0) { parked(true); speed(0) }
+                at(500) { warning(WarningType.SEATBELT, true) } // 주차 중에 켜진 경고는 이벤트가 아니다
+                at(1_000) { parked(false) }
+                at(3_000) { warning(WarningType.SEATBELT, false) }
+            },
+        )
+        assertEquals(listOf(EventType.TRIP_START, EventType.SEATBELT_WARN, EventType.SEATBELT_OK), steps.allEvents().map { it.type })
+        assertTrue(steps.first { it.output.atMs == 500L }.events.isEmpty())
+        // 출발과 같은 시각에 난다.
+        val departure = steps.first { it.events.any { e -> e.type == EventType.TRIP_START } }
+        assertEquals(listOf(EventType.TRIP_START, EventType.SEATBELT_WARN), departure.events.map { it.type })
+    }
+
+    @Test
+    fun departureWithoutSeatbeltWarningHasNoCheck() {
+        val steps = runScenario(
+            scenario("departure-clean") {
+                at(0) { parked(true); speed(0); warning(WarningType.SEATBELT, false) }
+                at(1_000) { parked(false) }
+            },
+        )
+        assertEquals(listOf(EventType.TRIP_START), steps.allEvents().map { it.type })
+    }
+
+    @Test
+    fun departureWithoutAnySeatbeltValueHasNoCheck() { // 벨트 경고를 지원하지 않는 차량(에뮬레이터)
+        val steps = runScenario(
+            scenario("departure-unsupported") {
+                at(0) { parked(true); speed(0) }
+                at(1_000) { parked(false) }
+            },
+        )
+        assertEquals(listOf(EventType.TRIP_START), steps.allEvents().map { it.type })
+    }
+
+    @Test
+    fun seatbeltWarningThatTurnsOnAfterDepartureStillGivesOnlyOk() { // 기존 동작 유지
+        val steps = runScenario(
+            scenario("warn-after") {
+                at(0) { parked(true); speed(0) }
+                at(1_000) { parked(false) }
+                at(2_000) { warning(WarningType.SEATBELT, true) }
+                at(3_000) { warning(WarningType.SEATBELT, false) }
+            },
+        )
+        assertEquals(listOf(EventType.TRIP_START, EventType.SEATBELT_OK), steps.allEvents().map { it.type })
+    }
+
+    @Test
+    fun departureCheckHappensOncePerTripAndDoesNotChangeTheScore() {
+        val steps = runScenario(
+            scenario("two-trips") {
+                at(0) { parked(true); speed(0); warning(WarningType.SEATBELT, true) }
+                at(1_000) { parked(false) }
+                at(2_000) { parked(true); speed(0) }
+                at(3_000) { parked(false) } // 벨트 경고가 아직 켜져 있으면 다음 출발에도 검문한다
+            },
+        )
+        assertEquals(2, steps.allEvents().count { it.type == EventType.SEATBELT_WARN })
+        assertEquals(0, steps.allEvents().first { it.type == EventType.SEATBELT_WARN }.scoreDelta)
+    }
+
     @Test
     fun seatbeltFlowGivesHappyMoodAndPoints() {
         val steps = runScenario(

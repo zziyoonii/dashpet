@@ -40,8 +40,8 @@ class ValueTypesTest {
     }
 
     @Test
-    fun eventTypesAreTheTenFromFr001() {
-        assertEquals(10, EventType.entries.size)
+    fun eventTypesAreTheElevenFromFr001AndTheDepartureSeatbeltCheck() {
+        assertEquals(11, EventType.entries.size)
     }
 
     @Test

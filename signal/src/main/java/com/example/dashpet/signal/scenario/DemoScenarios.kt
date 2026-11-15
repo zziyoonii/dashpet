@@ -7,8 +7,8 @@ import com.example.dashpet.signal.WarningType
 
 object DemoScenarios {
     /**
-     * 데모 출근 시나리오(52초, 개발 명세서 9장). 기대 결과: 이벤트 TRIP_START, SEATBELT_OK, HARD_CORNER,
-     * GOOD_LANE_CHANGE, LANE_DEPARTURE, HARD_BRAKE, TRIP_END 7개와 점수 94.
+     * 데모 출근 시나리오(52초, 개발 명세서 9장). 기대 결과: 이벤트 TRIP_START, SEATBELT_WARN, SEATBELT_OK, HARD_CORNER,
+     * GOOD_LANE_CHANGE, LANE_DEPARTURE, HARD_BRAKE, TRIP_END 8개와 점수 94.
      */
     val demoCommute: Scenario = scenario("demo-commute") {
         // 초기 상태: 이게 있어야 8초의 출발이 TRIP_START 가 된다.
@@ -20,10 +20,10 @@ object DemoScenarios {
             turnSignal(TurnState.OFF)
             restriction(RestrictionState.NONE)
         }
+        at(6_000) { warning(WarningType.SEATBELT, true) } // 아직 벨트를 안 맨 채로 출발을 준비한다(주차 중이라 이벤트 없음)
         at(8_000) {
             restriction(RestrictionState.ACTIVE) // 출발과 동시에 제한을 먼저 걸어 풀 모션이 새지 않게 한다
-            parked(false) // 벨트 경고 켜짐보다 먼저
-            warning(WarningType.SEATBELT, true)
+            parked(false) // 이 순간 벨트 경고가 켜져 있어 "벨트부터!" 가 난다(출발 전 검문)
         }
         at(10_000) { warning(WarningType.SEATBELT, false) }
         at(12_000) { speedRamp(0, 50, 8_000) } // 완만한 가속 (약 1.7 m/s²)
