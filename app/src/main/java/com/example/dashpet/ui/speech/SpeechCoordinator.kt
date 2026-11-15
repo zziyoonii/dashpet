@@ -35,7 +35,7 @@ class SpeechCoordinator(
     private val clock: () -> Long,
     private val log: (String) -> Unit = {},
 ) {
-    private val director = SpeechDirector(config)
+    private val director = SpeechDirector(config, log = log)
     private val _bubble = MutableStateFlow<BubbleState?>(null)
     val bubble: StateFlow<BubbleState?> = _bubble.asStateFlow()
     private val _voiceEnabled = MutableStateFlow(settings.voiceEnabled)

@@ -12,10 +12,14 @@ import com.example.dashpet.engine.speech.SpeechCommand.StopSpeaking
  * 시각은 호출자가 넘기는 값만 쓰고 난수를 쓰지 않으므로 같은 입력에는 같은 지시가 나온다.
  * 모션 등급은 `PetOutput.tier` 값을 그대로 받는다. 제한 상태를 다시 해석하지 않는다(헌장 I, II).
  * 한 인스턴스는 한 스레드(또는 한 코루틴)에서만 쓴다.
+ *
+ * 이벤트가 말하지 못하거나 밀려난 이유는 [log] 로 알린다(`skip event=… reason=…`, `queued …`, `preempt …`).
+ * 이벤트 종류와 이유, 시간 값만 담고 문장 본문은 담지 않는다(FR-019, FR-020).
  */
 class SpeechDirector(
     private val config: SpeechConfig = SpeechConfig(),
     private val catalog: SpeechCatalog = SpeechCatalog(),
+    private val log: (String) -> Unit = {},
 ) {
     private val lastSpokenAt = mutableMapOf<EventType, Long>()
     private val lastVariant = mutableMapOf<EventType, Int>()
@@ -32,9 +36,15 @@ class SpeechDirector(
         tierNow = tier
         val type = event.type
         val priority = type.speechPriority()
-        if (type == EventType.TRIP_END && tripEndSpoken) return emptyList() // 도착 인사는 한 번만
+        if (type == EventType.TRIP_END && tripEndSpoken) { // 도착 인사는 한 번만
+            log("skip event=$type reason=already-spoken")
+            return emptyList()
+        }
         val last = lastSpokenAt[type]
-        if (last != null && nowMs - last < config.cooldownFor(priority)) return emptyList()
+        if (last != null && nowMs - last < config.cooldownFor(priority)) {
+            log("skip event=$type reason=cooldown remainingMs=${config.cooldownFor(priority) - (nowMs - last)}")
+            return emptyList()
+        }
 
         val line = catalog.variants(type)[0] // 변형은 말할 때 고른다. 대기 중에는 문장 쌍만 필요
         val utterance = Utterance(type, priority, line.text, line.shortText, event.atMs)
@@ -42,11 +52,13 @@ class SpeechDirector(
         return when {
             current == null -> speak(utterance, nowMs)
             priority.rank > current.utterance.priority.rank -> {
+                pending?.let { log("skip event=${it.utterance.eventType} reason=dropped-by-preemption by=$type") }
                 pending = null
+                log("preempt event=$type over=${current.utterance.eventType}")
                 listOf(StopSpeaking(StopReason.PREEMPTED)) + speak(utterance, nowMs)
             }
             else -> {
-                queue(utterance, nowMs)
+                queue(utterance, nowMs, behind = current.utterance.eventType)
                 emptyList()
             }
         }
@@ -69,7 +81,10 @@ class SpeechDirector(
         speaking = null
         val p = pending ?: return emptyList()
         pending = null
-        if (nowMs - p.queuedAtMs > config.queueMaxAgeMs) return emptyList() // 오래된 말은 버린다
+        if (nowMs - p.queuedAtMs > config.queueMaxAgeMs) { // 오래된 말은 버린다
+            log("skip event=${p.utterance.eventType} reason=queue-expired waitedMs=${nowMs - p.queuedAtMs}")
+            return emptyList()
+        }
         return speak(p.utterance, nowMs)
     }
 
@@ -94,9 +109,15 @@ class SpeechDirector(
         return out
     }
 
-    private fun queue(utterance: Utterance, nowMs: Long) {
+    private fun queue(utterance: Utterance, nowMs: Long, behind: EventType) {
         val p = pending
-        if (p == null || utterance.priority.rank >= p.utterance.priority.rank) pending = Pending(utterance, nowMs)
+        if (p == null || utterance.priority.rank >= p.utterance.priority.rank) {
+            if (p != null) log("skip event=${p.utterance.eventType} reason=replaced-in-queue by=${utterance.eventType}")
+            pending = Pending(utterance, nowMs)
+            log("queued event=${utterance.eventType} behind=$behind")
+        } else {
+            log("skip event=${utterance.eventType} reason=lower-than-queued queued=${p.utterance.eventType}")
+        }
     }
 
     private fun speak(utterance: Utterance, nowMs: Long): List<SpeechCommand> {

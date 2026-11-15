@@ -116,3 +116,22 @@
 - 따라서 이 에뮬레이터에서는 1600x900 실제 화면에서 말풍선을 직접 확인할 수 없다. [확인 필요: 실기기 또는 창 영역을 다시 계산하는 환경]
 - 간접 근거: 이때 앱이 받은 창 설정은 `w748dp h538dp`, 360dpi 로, 2560x1440 + 밀도 360 에서 오른쪽 창이 받는 크기(1682x1210 px = 748x538 dp)와 같다. 그 조건에서는 말풍선이 잘리지 않고 문장 전체가 보였다(위 시나리오 17 기록). 앱은 자기 창의 dp 크기만 보므로 같은 레이아웃이 나올 것으로 보이나, 실제 1600x900 화면에서의 확인은 아니다.
 - `wm size reset`, `wm density reset` 로 되돌렸다.
+
+## 연타 시 이벤트가 말하지 않은 이유 (2026-11-15, 에뮬레이터, 건너뜀 로그 추가 후)
+
+`SpeechDirector` 가 이벤트를 말하지 않거나 밀어낼 때 이유를 `Speech` 로그로 남기게 했다(`skip event=… reason=…`, `queued …`, `preempt …`. 문장 본문은 남기지 않는다). 데모 모드, 제한 없음에서 말하기 버튼을 0.3초 간격으로 6번 누른 결과:
+
+```
+speak   TRIP_START
+preempt SEATBELT_OK over=TRIP_START         → speak SEATBELT_OK
+preempt HARD_ACCEL  over=SEATBELT_OK        → speak HARD_ACCEL
+queued  HARD_BRAKE  behind=HARD_ACCEL                         ← 4번째 이벤트
+skip    HARD_BRAKE  reason=replaced-in-queue by=HARD_CORNER   ← 같은 우선순위의 새 이벤트가 대기 슬롯을 차지
+queued  HARD_CORNER behind=HARD_ACCEL
+skip    HARD_CORNER reason=dropped-by-preemption by=LANE_DEPARTURE
+preempt LANE_DEPARTURE over=HARD_ACCEL      → speak LANE_DEPARTURE
+```
+
+- 4번째 이벤트(`HARD_BRAKE`)는 버그가 아니라 규칙대로 밀려난 것이다. 말하는 중에 같은 우선순위(경고)가 오면 대기 슬롯 하나에 넣고, 더 나중에 온 같은 우선순위 이벤트가 그 슬롯을 차지한다(`replaced-in-queue`). 그 대기 이벤트는 더 높은 위험 경고가 선점하면 함께 버려진다(`dropped-by-preemption`).
+- 그 밖의 이유: `cooldown remainingMs=…`(쿨다운), `already-spoken`(도착 인사 한 번), `lower-than-queued`(대기 중인 것보다 낮음), `queue-expired waitedMs=…`(대기 2초 초과).
+- 판단: 규칙(위험 경고 우선, 대기 슬롯 하나, 오래된 말 폐기)이 의도대로 동작하고 있다. 연타하면 중간 이벤트가 빠지는 것이 설계라는 뜻이다. 운전 중 이벤트가 이렇게 몰리면 경고 하나만 대기하고 나머지는 버려진다는 점을 기획자가 알고 있어야 한다. **[확인 필요]**
