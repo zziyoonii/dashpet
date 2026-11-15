@@ -1,6 +1,7 @@
 package com.example.dashpet.signal
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -44,5 +45,20 @@ class RawSignalTest {
             LaneChange(7, Side.RIGHT), Restriction(8, RestrictionState.ACTIVE),
         )
         assertEquals((1L..8L).toList(), signals.map { it.timestampMs })
+    }
+
+    @Test
+    fun tickCarriesOnlyATimestamp() {
+        val tick: RawSignal = Tick(1_500)
+        assertEquals(1_500L, tick.timestampMs)
+        assertEquals(Tick(1_500), tick)
+        assertNotEquals(Tick(1_600), tick)
+    }
+
+    @Test
+    fun tickFollowsTheNonDecreasingTimeRuleWithOtherSignals() {
+        // 같은 시각이면 신호가 먼저, Tick 이 나중. 시각은 감소하지 않는다.
+        val stream: List<RawSignal> = listOf(Speed(0, 1f), Tick(0), Tick(100), Speed(100, 2f), Tick(100), Tick(200))
+        assertEquals(stream.map { it.timestampMs }.sorted(), stream.map { it.timestampMs })
     }
 }

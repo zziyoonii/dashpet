@@ -14,6 +14,9 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MockSignalSourceTest {
+    /** 틱을 끈(tickIntervalMs = 0) 소스로 만든 기존 동작의 기준 열. */
+    private fun RawSignal.isTick() = this is Tick
+
     private val demo = scenario("mini") {
         at(0) { parked(true); speed(0) }
         at(1_000) { parked(false) }
@@ -23,7 +26,7 @@ class MockSignalSourceTest {
 
     @Test
     fun immediateEmitsExpandedSignalsInOrder() = runTest {
-        val source = MockSignalSource(demo, Pacing.IMMEDIATE)
+        val source = MockSignalSource(demo, Pacing.IMMEDIATE, tickIntervalMs = 0)
         val got = mutableListOf<RawSignal>()
         val job = launch { source.signals.collect { got += it } }
         runCurrent()
@@ -36,7 +39,7 @@ class MockSignalSourceTest {
 
     @Test
     fun realTimeEmitsSameContentAndOrderOnVirtualTime() = runTest {
-        val source = MockSignalSource(demo, Pacing.REAL_TIME)
+        val source = MockSignalSource(demo, Pacing.REAL_TIME, tickIntervalMs = 0)
         val got = mutableListOf<RawSignal>()
         val job = launch { source.signals.collect { got += it } }
         source.start()
@@ -48,7 +51,7 @@ class MockSignalSourceTest {
 
     @Test
     fun realTimeWaitsForSignalTimes() = runTest {
-        val source = MockSignalSource(demo, Pacing.REAL_TIME)
+        val source = MockSignalSource(demo, Pacing.REAL_TIME, tickIntervalMs = 0)
         val got = mutableListOf<RawSignal>()
         val job = launch { source.signals.collect { got += it } }
         source.start()
@@ -64,7 +67,7 @@ class MockSignalSourceTest {
 
     @Test
     fun noEmissionBeforeStart() = runTest {
-        val source = MockSignalSource(demo, Pacing.IMMEDIATE)
+        val source = MockSignalSource(demo, Pacing.IMMEDIATE, tickIntervalMs = 0)
         val got = mutableListOf<RawSignal>()
         val job = launch { source.signals.collect { got += it } }
         advanceUntilIdle()
@@ -77,7 +80,7 @@ class MockSignalSourceTest {
 
     @Test
     fun stopHaltsEmissionAndStartRestartsFromBeginning() = runTest {
-        val source = MockSignalSource(demo, Pacing.REAL_TIME)
+        val source = MockSignalSource(demo, Pacing.REAL_TIME, tickIntervalMs = 0)
         val got = mutableListOf<RawSignal>()
         val job = launch { source.signals.collect { got += it } }
         source.start()
@@ -97,7 +100,7 @@ class MockSignalSourceTest {
 
     @Test
     fun startAfterCompletionReplays() = runTest {
-        val source = MockSignalSource(demo, Pacing.IMMEDIATE)
+        val source = MockSignalSource(demo, Pacing.IMMEDIATE, tickIntervalMs = 0)
         val got = mutableListOf<RawSignal>()
         val job = launch { source.signals.collect { got += it } }
         source.start()
@@ -111,7 +114,7 @@ class MockSignalSourceTest {
     @Test
     fun sameScenarioGivesSameStream() = runTest {
         suspend fun collect(pacing: Pacing): List<RawSignal> {
-            val source = MockSignalSource(demo, pacing)
+            val source = MockSignalSource(demo, pacing, tickIntervalMs = 0)
             val got = mutableListOf<RawSignal>()
             val job = launch { source.signals.collect { got += it } }
             source.start()
@@ -121,5 +124,87 @@ class MockSignalSourceTest {
         }
         assertEquals(collect(Pacing.IMMEDIATE), collect(Pacing.REAL_TIME))
         assertEquals(collect(Pacing.IMMEDIATE), collect(Pacing.IMMEDIATE))
+    }
+
+    // ---- 틱 (002 R12) ----
+
+    private suspend fun kotlinx.coroutines.test.TestScope.collectAll(source: MockSignalSource): List<RawSignal> {
+        val got = mutableListOf<RawSignal>()
+        val job = launch { source.signals.collect { got += it } }
+        source.start()
+        advanceUntilIdle()
+        job.cancel()
+        return got
+    }
+
+    @Test
+    fun defaultsAre100msIntervalAnd3000msTail() = runTest {
+        val got = collectAll(MockSignalSource(demo, Pacing.IMMEDIATE))
+        val ticks = got.filter { it.isTick() }.map { it.timestampMs }
+        assertEquals((0L..8_000L step 100L).toList(), ticks) // 첫 신호 0, 마지막 신호 5000 + tail 3000
+    }
+
+    @Test
+    fun ticksStartAtFirstSignalAndEndAtLastSignalPlusTail() = runTest {
+        val late = scenario("late") {
+            at(1_000) { parked(true) }
+            at(1_450) { speed(1) }
+        }
+        val got = collectAll(MockSignalSource(late, Pacing.IMMEDIATE, tickIntervalMs = 200, tailMs = 500))
+        val ticks = got.filter { it.isTick() }.map { it.timestampMs }
+        assertEquals(listOf(1_000L, 1_200L, 1_400L, 1_600L, 1_800L), ticks) // 1450 + 500 = 1950 이하
+    }
+
+    @Test
+    fun scenarioSignalsComeBeforeTickAtTheSameTime() = runTest {
+        val got = collectAll(MockSignalSource(demo, Pacing.IMMEDIATE))
+        // 0초: 신호 두 개(ParkedState, Speed) 다음에 Tick
+        assertEquals(listOf(false, false, true), got.take(3).map { it.isTick() })
+        assertEquals(0L, got[2].timestampMs)
+        // 모든 시각에서 Tick 은 같은 시각의 신호보다 뒤에 있다.
+        got.groupBy { it.timestampMs }.forEach { (t, group) ->
+            val firstTick = group.indexOfFirst { it.isTick() }
+            if (firstTick >= 0) assertTrue("t=$t", group.drop(firstTick).all { it.isTick() })
+        }
+    }
+
+    @Test
+    fun mergedStreamKeepsScenarioSignalsAndNeverDecreasesInTime() = runTest {
+        val got = collectAll(MockSignalSource(demo, Pacing.IMMEDIATE))
+        assertEquals(demo.expand(), got.filterNot { it.isTick() })
+        assertTrue(got.zipWithNext().all { (a, b) -> a.timestampMs <= b.timestampMs })
+    }
+
+    @Test
+    fun realTimeAndImmediateGiveTheSameStreamWithTicks() = runTest {
+        val immediate = collectAll(MockSignalSource(demo, Pacing.IMMEDIATE))
+        val realTime = collectAll(MockSignalSource(demo, Pacing.REAL_TIME))
+        assertEquals(immediate, realTime)
+    }
+
+    @Test
+    fun realTimeWaitsUntilLastTick() = runTest {
+        collectAll(MockSignalSource(demo, Pacing.REAL_TIME))
+        assertEquals(8_000L, currentTime) // 마지막 신호 5000 + tail 3000
+    }
+
+    @Test
+    fun zeroTickIntervalMeansNoTicks() = runTest {
+        val got = collectAll(MockSignalSource(demo, Pacing.IMMEDIATE, tickIntervalMs = 0))
+        assertEquals(demo.expand(), got)
+    }
+
+    @Test
+    fun sameScenarioWithTicksGivesSameStream() = runTest {
+        assertEquals(
+            collectAll(MockSignalSource(demo, Pacing.IMMEDIATE)),
+            collectAll(MockSignalSource(demo, Pacing.IMMEDIATE)),
+        )
+    }
+
+    @Test
+    fun emptyScenarioEmitsNothing() = runTest {
+        val got = collectAll(MockSignalSource(scenario("empty") { }, Pacing.IMMEDIATE))
+        assertTrue(got.isEmpty())
     }
 }

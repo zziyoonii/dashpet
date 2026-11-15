@@ -8,6 +8,7 @@ import com.example.dashpet.signal.RawSignal
 import com.example.dashpet.signal.Restriction
 import com.example.dashpet.signal.RestrictionState
 import com.example.dashpet.signal.Speed
+import com.example.dashpet.signal.Tick
 import com.example.dashpet.signal.TurnSignal
 import com.example.dashpet.signal.TurnState
 import com.example.dashpet.signal.VehicleWarning
@@ -67,6 +68,7 @@ class EngineCore(private val config: EngineConfig = EngineConfig()) {
             }
             is LaneChange -> laneChanges.onLaneChange(t, signal.direction)?.let(candidates::add)
             is Restriction -> restriction = signal.state
+            is Tick -> Unit // 이벤트 없이 시간만 진행(위의 advanceTo 로 처리됨)
         }
         val events = candidates.mapNotNull(::commit)
         return EngineStep(events, output(oneShotCandidate = events.isNotEmpty()))
