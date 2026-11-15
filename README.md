@@ -88,5 +88,7 @@ Pleos Connect(Android Automotive OS 기반) 차량용 앱입니다.
 
 ## APK 파일 위치 또는 GitHub Release 링크
 
+- **release APK (제출용)**: [GitHub Release v1.0](https://github.com/zziyoonii/dashpet/releases/tag/v1.0) 의 `Crevis_DashPet_release.apk` 입니다. 정식 키로 서명했고(`CN=DashPet`), `debuggable` 이 꺼져 있으며 버전은 1.0(versionCode 1)입니다. SHA-256 과 설치 방법은 Release 노트에 있습니다.
+- **직접 빌드**: `./gradlew :app:assembleRelease` 를 하면 `app/build/outputs/apk/release/app-release.apk` 가 생깁니다. 서명하려면 저장소에 올리지 않는 `keystore.properties`(`storeFile`, `storePassword`, `keyAlias`, `keyPassword`)가 필요하고, 없으면 서명 없이 `app-release-unsigned.apk` 가 나옵니다(설치되지 않음). 서명 키는 개발자 PC 에만 있습니다.
 - **디버그 APK**: 위 4번 빌드 뒤 `app/build/outputs/apk/debug/app-debug.apk` 에 생깁니다. 빌드 산출물이라 저장소에는 커밋하지 않습니다.
-- **GitHub Release**: 아직 만들지 않았습니다. **[확인 필요]** 제출용 릴리스 APK 는 정식 서명, `debuggable` 끄기, 버전 올리기가 필요한데 릴리스 서명 설정이 아직 없습니다. 릴리스를 올리면 이 항목에 링크를 적습니다.
+- release APK 에는 확인용 컨트롤(데모 재생, 제한 상태 버튼, 말하기, 음성 스위치)이 없습니다. 이 컨트롤은 디버그 빌드에만 있습니다. **[확인 필요]** 대회 측이 요구하는 서명 방식(App Market 업로드 시 재서명 여부 등)은 문서에 없습니다.
