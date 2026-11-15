@@ -19,10 +19,10 @@ FR-001~FR-021 과 SC-001~SC-009 를 대응하는 테스트(`클래스.메서드`
 | FR-009 | 등급 전환 즉시 반영, 지난 이벤트 재현 없음 | `PetControllerTransitionTest.fullToStaticClearsEverythingInTheSameCall`, `staticToFullStartsFreshPhysics`, `rejumpScheduleDoesNotSurviveStaticDetour`, `PetControllerFullTest.enteringFullWhileAlreadyHappyDoesNotReplayEntryEffect` | C |
 | FR-010 | 방향지시등 윙크(풀 380ms, 정적 선) | `PetControllerWinkTest.rightSignalClosesRightEyeFirstThenAlternatesEvery380ms`, `leftSignalWinksLeftEyeOnly`, `turningOffRemovesWinkImmediately`, `winkStaysWithReducedMotion`, `staticModeHasNoTimedWink`, `PetPoseTest.turnSignalClosesSameSideEyeAndShowsAmberBrow` | 에뮬레이터(2026-11-15, 윙크 우: 감김/뜸 확인) |
 | FR-011 | 몸 색 그라데이션, 애교 볼터치, 활발 점프 | `PetControllerAppearanceTest.livelyJumpsHigherThanSturdyOnHappy`, `cuteAlwaysHasCheeksWhateverTheMood`, `otherPersonalitiesHaveCheeksOnlyWhenHappy`, `PetPaletteTest.outlineAlphaBoundaryAt0_3`, `mixIsSrgbLinearAndRounded` | `visual-parity.md` 외형 |
-| FR-012 | 크기 비례, 회전과 분할에서 유지 | 테스트 없음 | G 부분 확인(밀도 변경에서 상태 유지). 회전과 `wm size` 는 미확인 |
+| FR-012 | 크기 비례, 회전과 분할에서 유지 | 테스트 없음 | G 부분 확인(밀도 변경과 회전 후 복원에서 상태 유지. 회전 중 앱 안의 잘림과 `wm size` 는 시스템 화면 배치가 깨져 확인 못 함) |
 | FR-013 | 백그라운드에서 갱신과 시간 정지, 복귀 시 즉시 | `MotionPolicyTest.loopRunsOnlyForFullMotionWhileStarted`, `firstFrameAfterStartOrResumeHasZeroDt` | F, J 통과(2026-11-15) |
 | FR-014 | 60fps 목표, 못 지키면 파티클부터 줄임 | `ParticlesTest.throttlesAfterThirtyConsecutiveSlowFramesAndResumesOnRecovery`, `controllerStopsSpawningWhenFramesAreSlowAndResumes`, `ParticlesAmbientTest.stopsWhileThrottledForSlowFrames` | E(약 58fps, 경계) |
-| FR-015 | 모션 줄이기 | `PetPhysicsTest.reducedMotionDampsHarder`, `SoftBodyTest.reducedMotionSettlesFasterAndKicksSmaller`, `MotionPolicyTest.reducedMotionCorrection`, `PetControllerFullTest.reducedMotionSkipsJitter`, `ParticlesAmbientTest.reducedMotionMakesNoParticles` | I 미확인 |
+| FR-015 | 모션 줄이기 | `PetPhysicsTest.reducedMotionDampsHarder`, `SoftBodyTest.reducedMotionSettlesFasterAndKicksSmaller`, `MotionPolicyTest.reducedMotionCorrection`, `PetControllerFullTest.reducedMotionSkipsJitter`, `ParticlesAmbientTest.reducedMotionMakesNoParticles` | I 부분 확인(애니메이션 끈 채 풀 모션 정상 구동, 출렁임과 파티클은 화면으로 못 봄) |
 | FR-016 | 텍스트 대비 4.5:1 이상, 12sp 이상 | `PetPaletteTest.nameLabelContrastIsAtLeast4_5AgainstEveryBackground`, `contrastRatioMatchesWcag` | 에뮬레이터(이름 라벨 14sp 표시 확인) |
 | FR-017 | 데모 재생, 정지, 다시 재생 | `DemoViewModelTest.initialStateIsStopped`, `togglePlayStartsThenStops`, `playbackReachesTheEndAndStops`, `immediatePacingProducesTheDemoEvents`, `stopReturnsPetToCalmAndResetsSession`, `newSessionClearsManualRestrictionAndRestartsFromBeginning`(app) | B |
 | FR-018 | 수동 제한 토글, 확인용 표시 | `DemoViewModelTest.restrictionChangesTierEvenWhenNotPlaying`, `restrictionIgnoredWhenDebugUnavailable`, `debugPanelVisibilityToggles`, `timeLabelFormat`(app) | C |
@@ -42,10 +42,10 @@ FR-001~FR-021 과 SC-001~SC-009 를 대응하는 테스트(`클래스.메서드`
 | SC-006 | 제한 구간(8~52초)에 풀 모션 0건 | `PetControllerEngineTest.staticTierFromDemoScenarioIgnoresEvents` | B: 14~62초 캡처 프레임 모두 정적 |
 | SC-007 | 백그라운드 1초 안에 갱신 정지 | `MotionPolicyTest.loopRunsOnlyForFullMotionWhileStarted` | F 통과(2026-11-15, 덮은 뒤 5초 동안 프레임 0) |
 | SC-008 | 회전과 분할 크기 변경 후 유지 | 테스트 없음 | G 부분 확인(밀도 변경에서 재생 위치와 외형 유지) |
-| SC-009 | 여러 번 재생해도 같은 반응 | `PetControllerFullTest.sameSeedAndSameCallsGiveSameRenderState`, `PetPhysicsTest.sameSeedAndCallsGiveSameState`, `SoftBodyTest.sameInputGivesSameResult` | H 부분 확인(3번 모두 끝까지 재생, 이벤트별 대조는 못 함, 부하로 속도 일정하지 않음) |
+| SC-009 | 여러 번 재생해도 같은 반응 | `PetControllerFullTest.sameSeedAndSameCallsGiveSameRenderState`, `PetPhysicsTest.sameSeedAndCallsGiveSameState`, `SoftBodyTest.sameInputGivesSameResult` | H: 유효한 3회가 같은 이벤트 순서(2026-11-15, 로그 비교). 이벤트별 화면 반응 대조와 시간 일치는 못 함(부하) |
 
 ## 빠진 항목 요약
 
 - 자동 테스트가 없는 요구: FR-002, FR-007, FR-012, FR-020, SC-001, SC-004, SC-005, SC-008. 그리기와 시스템 동작이라 JVM 에서 확인할 수 없다.
-- 에뮬레이터에서 미확인 또는 부분 확인: 화면 회전과 `wm size` 변경(G, FR-012, SC-008), 데모 3회 반복의 이벤트별 대조(H, SC-009), 시스템 애니메이션 끄기(I, FR-015).
+- 에뮬레이터에서 미확인 또는 부분 확인: 회전과 `wm size` 에서 앱 안의 잘림(G, FR-012, SC-008, 시스템 화면 배치가 깨져 판단 불가), 이벤트별 화면 반응의 회차 대조(H, SC-009), 시스템 애니메이션 끈 상태의 화면 반응(I, FR-015).
 - 사람이 승인해야 하는 항목: 시안과의 대조(FR-020, SC-001)와 정적 포즈 초안 값(`research.md` R8).
