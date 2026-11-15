@@ -11,6 +11,9 @@ android {
     defaultConfig {
         minSdk = 29
     }
+    // AAOS 표준 Car API(android.car)는 컴파일 전용으로 참조한다. 런타임에는 부트 클래스패스가 제공한다(research R1).
+    // 이 참조를 쓰는 파일은 car/AndroidCarGateway.kt 하나뿐이다.
+    useLibrary("android.car")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

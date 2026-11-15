@@ -9,7 +9,9 @@ import com.example.dashpet.signal.MockSignalSource
 import com.example.dashpet.signal.Pacing
 import com.example.dashpet.signal.RawSignal
 import com.example.dashpet.signal.RestrictionState
+import com.example.dashpet.signal.SwitchableSignalSource
 import com.example.dashpet.signal.VehicleSignalSource
+import com.example.dashpet.signal.car.SignalDiagnostics
 import com.example.dashpet.signal.scenario.DemoScenarios
 import com.example.dashpet.signal.scenario.Scenario
 import kotlinx.coroutines.Job
@@ -24,8 +26,14 @@ import kotlinx.coroutines.launch
 
 enum class PlaybackState { STOPPED, PLAYING }
 
+/** 신호를 어디서 받는지. 한 번에 하나만 활성이다(spec FR-015). */
+enum class SignalMode { VEHICLE, DEMO }
+
 /** 데모 화면 상태(data-model.md DemoState). */
 data class DemoState(
+    val mode: SignalMode = SignalMode.VEHICLE,
+    /** 실차 신호 진단. 실차 모드에서만 값이 있고 데모 모드에서는 null. */
+    val diagnostics: SignalDiagnostics? = null,
     val playback: PlaybackState = PlaybackState.STOPPED,
     val elapsedMs: Long = 0L,
     val manualRestriction: RestrictionState? = null,
@@ -46,14 +54,25 @@ private class PassiveSource(private val delegate: VehicleSignalSource) : Vehicle
  * 시간은 `delay` 로만 센다(벽시계 미사용).
  */
 class DemoViewModel(
+    /** 실차 신호 소스. 앱은 `CarSignalSource.create(context)` 를 넘긴다(`:app` 은 `android.car` 를 직접 보지 않는다). */
+    private val vehicleSource: VehicleSignalSource,
     scenario: Scenario = DemoScenarios.demoCommute,
     pacing: Pacing = Pacing.REAL_TIME,
     debugAvailable: Boolean = false,
+    initialMode: SignalMode = SignalMode.VEHICLE,
+    /** 실차 소스의 진단 값(`CarSignalSource.diagnostics`). 없으면 진단을 보이지 않는다. */
+    private val diagnostics: StateFlow<SignalDiagnostics>? = null,
+    /** 모드 전환 같은 드문 사건만 한 줄씩 남긴다(앱은 `Log.i("CarSignal", it)` 를 넘긴다). 단위 테스트가 Android 없이 돌도록 주입받는다. */
+    private val log: (String) -> Unit = {},
 ) : ViewModel() {
     private val mock = MockSignalSource(scenario, pacing)
+    private val demoSource = PassiveSource(mock)
+
+    /** 엔진이 보는 단일 소스. 모드에 맞는 소스의 신호만 내보낸다. */
+    private val switchable = SwitchableSignalSource(if (initialMode == SignalMode.VEHICLE) vehicleSource else demoSource)
 
     /** 컨트롤러 연결용(`PetController.collectFrom(engine)`). 메인 스레드에서만 쓴다. */
-    val engine = DrivingEngine(PassiveSource(mock), viewModelScope)
+    val engine = DrivingEngine(switchable, viewModelScope)
 
     /** 시나리오 총 길이(마지막 신호 시각 + 틱 꼬리). */
     val totalMs: Long = (scenario.expand().lastOrNull()?.timestampMs ?: 0L) + MockSignalSource.DEFAULT_TAIL_MS
@@ -61,16 +80,60 @@ class DemoViewModel(
     val output: StateFlow<PetOutput> get() = engine.output
     val events: SharedFlow<DrivingEvent> get() = engine.events
 
-    private val _demo = MutableStateFlow(DemoState(debugAvailable = debugAvailable))
+    private val _demo = MutableStateFlow(
+        DemoState(
+            mode = initialMode,
+            debugAvailable = debugAvailable,
+            diagnostics = if (initialMode == SignalMode.VEHICLE) diagnostics?.value else null,
+        ),
+    )
     val demo: StateFlow<DemoState> = _demo.asStateFlow()
 
     private var timer: Job? = null
 
+    /** 화면에 보이는 중인가(`onForeground`/`onBackground`). 실차 모드의 엔진은 이 동안에만 돈다. */
+    private var foreground = false
+
     init {
-        engine.start()
+        // 데모 모드의 엔진은 항상 켜 둔다(수동 제한 주입이 항상 처리되도록). 실차 모드는 화면에 보일 때 시작한다.
+        if (initialMode == SignalMode.DEMO) engine.start()
+        // 진단은 실차 모드에서만 보인다. 데모 모드에서는 값이 바뀌어도 반영하지 않는다.
+        diagnostics?.let { flow ->
+            viewModelScope.launch {
+                flow.collect { d ->
+                    _demo.update { if (it.mode == SignalMode.VEHICLE) it.copy(diagnostics = d) else it }
+                }
+            }
+        }
+    }
+
+    /**
+     * 신호 모드를 바꾼다. 순서는 `engine.stop()` → 소스 선택 → `engine.start()`(새 세션, 엔진 상태 초기화)로, 이전 모드의
+     * 신호가 새 모드에 섞이지 않는다. 데모 재생과 수동 제한은 초기화된다. 같은 모드면 아무 일도 하지 않는다.
+     */
+    fun setMode(mode: SignalMode) {
+        if (_demo.value.mode == mode) return
+        log("mode=$mode")
+        timer?.cancel()
+        timer = null
+        mock.stop()
+        engine.stop()
+        switchable.select(if (mode == SignalMode.VEHICLE) vehicleSource else demoSource)
+        // 실차 모드는 화면에 보이는 동안에만 시작한다. 보이지 않는 중에 바꿨다면 다시 보일 때 시작한다.
+        if (mode == SignalMode.DEMO || foreground) engine.start()
+        _demo.update {
+            it.copy(
+                mode = mode,
+                playback = PlaybackState.STOPPED,
+                elapsedMs = 0L,
+                manualRestriction = null,
+                diagnostics = if (mode == SignalMode.VEHICLE) diagnostics?.value else null,
+            )
+        }
     }
 
     fun togglePlay() {
+        if (_demo.value.mode != SignalMode.DEMO) return // 실차 모드에서는 재생이 없다
         if (_demo.value.playback == PlaybackState.PLAYING) stop() else play()
     }
 
@@ -90,6 +153,7 @@ class DemoViewModel(
 
     /** 재생을 멈추고 펫을 편안 상태로 되돌린다(새 세션). */
     fun stop() {
+        if (_demo.value.mode != SignalMode.DEMO) return
         newSession()
     }
 
@@ -104,8 +168,36 @@ class DemoViewModel(
 
     fun setRestriction(state: RestrictionState) {
         if (!_demo.value.debugAvailable) return
+        if (_demo.value.mode != SignalMode.DEMO) return // 실차 상태를 덮어쓰지 못한다(FR-016)
         engine.injectRestriction(state)
         _demo.update { it.copy(manualRestriction = state) }
+    }
+
+    /**
+     * 화면에 보이기 시작함. 실차 모드면 신호 수신을 시작한다. 이미 수신 중이면 아무것도 하지 않는다(화면 회전으로
+     * 다시 불려도 중복 시작이 없다). 시작은 새 세션이라 현재 속도, 기어, 제한 상태를 한 번씩 다시 읽는다. 데모 모드는 건드리지 않는다.
+     */
+    fun onForeground() {
+        foreground = true
+        if (_demo.value.mode == SignalMode.VEHICLE) engine.start()
+    }
+
+    /** 화면에서 사라짐. 실차 모드면 신호 수신을 멈추고 차량 서비스 연결을 정리한다. 데모 모드는 건드리지 않는다. */
+    fun onBackground() {
+        foreground = false
+        if (_demo.value.mode == SignalMode.VEHICLE) engine.stop()
+    }
+
+    /**
+     * `CAR_SPEED` 런타임 권한 요청의 결과. 실차 모드에서 화면에 보이는 중이면 소스를 다시 시작해 속도를 포함하거나(허용),
+     * 거부 이유를 진단에 보이게 한다(거부). 소스는 시작할 때마다 권한을 새로 확인한다.
+     * 데모 모드이거나 보이지 않는 중이면 아무 일도 하지 않는다(다음에 보일 때 새로 확인한다).
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun onSpeedPermissionResult(granted: Boolean) {
+        if (_demo.value.mode != SignalMode.VEHICLE || !foreground) return
+        engine.stop()
+        engine.start()
     }
 
     fun setDebugPanelVisible(visible: Boolean) {
