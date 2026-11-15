@@ -14,13 +14,13 @@ FR-001~FR-021 과 SC-001~SC-009 를 대응하는 테스트(`클래스.메서드`
 | FR-004 | 강도 비례, 유지 후 출렁이며 복귀 | `PetPhysicsTest.cornerForceAndDurationFollowStrength`, `strongerCornerPenetratesMoreAndLastsLonger`, `cornerReleaseKicksBackAgainstTheWall`, `strengthIsClampedToZeroOne` | B |
 | FR-005 | 정적 포즈와 색 | `PetPoseTest.happyMixesGreenAt0_9`, `dizzyMixesAmberAt0_8`, `startledMixesRedAt0_85WithoutBlink`, `squashedLeansTowardDirection`, `idleKeepsBodyColorAndUprightShape` | 정적 장면 결과, `visual-parity.md` C |
 | FR-006 | 정적에서 모션, 파티클, 갱신 없음 | `PetControllerStaticTest.stepDoesNothingInStatic`, `moodEntryEffectsAreIgnoredInStatic`, `sameOutputDoesNotInvalidate`, `ParticlesAmbientTest.staticModeMakesNoParticles` | D(프레임 0) |
-| FR-007 | 정적에서 터치 무반응 | 테스트 없음. `pet/src/main` 에 터치 처리(`pointerInput`, `clickable`)가 없음(코드 검색, T071) | 미확인(에뮬레이터 터치) |
+| FR-007 | 정적에서 터치 무반응 | 테스트 없음. `pet/src/main` 에 터치 처리(`pointerInput`, `clickable`)가 없음(코드 검색, T071) | 에뮬레이터(2026-11-15): 정적에서 탭 3번과 스와이프 3번에도 프레임 0. 통과 |
 | FR-008 | ONE_SHOT, 알 수 없는 등급은 정적 | `PetControllerStaticTest.oneShotBehavesLikeStatic` | |
 | FR-009 | 등급 전환 즉시 반영, 지난 이벤트 재현 없음 | `PetControllerTransitionTest.fullToStaticClearsEverythingInTheSameCall`, `staticToFullStartsFreshPhysics`, `rejumpScheduleDoesNotSurviveStaticDetour`, `PetControllerFullTest.enteringFullWhileAlreadyHappyDoesNotReplayEntryEffect` | C |
 | FR-010 | 방향지시등 윙크(풀 380ms, 정적 선) | `PetControllerWinkTest.rightSignalClosesRightEyeFirstThenAlternatesEvery380ms`, `leftSignalWinksLeftEyeOnly`, `turningOffRemovesWinkImmediately`, `winkStaysWithReducedMotion`, `staticModeHasNoTimedWink`, `PetPoseTest.turnSignalClosesSameSideEyeAndShowsAmberBrow` | 에뮬레이터(2026-11-15, 윙크 우: 감김/뜸 확인) |
 | FR-011 | 몸 색 그라데이션, 애교 볼터치, 활발 점프 | `PetControllerAppearanceTest.livelyJumpsHigherThanSturdyOnHappy`, `cuteAlwaysHasCheeksWhateverTheMood`, `otherPersonalitiesHaveCheeksOnlyWhenHappy`, `PetPaletteTest.outlineAlphaBoundaryAt0_3`, `mixIsSrgbLinearAndRounded` | `visual-parity.md` 외형 |
-| FR-012 | 크기 비례, 회전과 분할에서 유지 | 테스트 없음 | G 미확인 |
-| FR-013 | 백그라운드에서 갱신과 시간 정지, 복귀 시 즉시 | `MotionPolicyTest.loopRunsOnlyForFullMotionWhileStarted`, `firstFrameAfterStartOrResumeHasZeroDt` | F, J 미확인 |
+| FR-012 | 크기 비례, 회전과 분할에서 유지 | 테스트 없음 | G 부분 확인(밀도 변경에서 상태 유지). 회전과 `wm size` 는 미확인 |
+| FR-013 | 백그라운드에서 갱신과 시간 정지, 복귀 시 즉시 | `MotionPolicyTest.loopRunsOnlyForFullMotionWhileStarted`, `firstFrameAfterStartOrResumeHasZeroDt` | F, J 통과(2026-11-15) |
 | FR-014 | 60fps 목표, 못 지키면 파티클부터 줄임 | `ParticlesTest.throttlesAfterThirtyConsecutiveSlowFramesAndResumesOnRecovery`, `controllerStopsSpawningWhenFramesAreSlowAndResumes`, `ParticlesAmbientTest.stopsWhileThrottledForSlowFrames` | E(약 58fps, 경계) |
 | FR-015 | 모션 줄이기 | `PetPhysicsTest.reducedMotionDampsHarder`, `SoftBodyTest.reducedMotionSettlesFasterAndKicksSmaller`, `MotionPolicyTest.reducedMotionCorrection`, `PetControllerFullTest.reducedMotionSkipsJitter`, `ParticlesAmbientTest.reducedMotionMakesNoParticles` | I 미확인 |
 | FR-016 | 텍스트 대비 4.5:1 이상, 12sp 이상 | `PetPaletteTest.nameLabelContrastIsAtLeast4_5AgainstEveryBackground`, `contrastRatioMatchesWcag` | 에뮬레이터(이름 라벨 14sp 표시 확인) |
@@ -40,12 +40,12 @@ FR-001~FR-021 과 SC-001~SC-009 를 대응하는 테스트(`클래스.메서드`
 | SC-004 | 출력이 바뀐 뒤 0.25초 안에 반응 시작 | 테스트 없음(`applyOutput` 은 같은 호출에서 상태를 바꾼다) | 미측정 |
 | SC-005 | 풀 모션 평균 55fps 이상 | 테스트 없음 | E: 약 58fps, p99 73 ms(경계). 통과(경계) |
 | SC-006 | 제한 구간(8~52초)에 풀 모션 0건 | `PetControllerEngineTest.staticTierFromDemoScenarioIgnoresEvents` | B: 14~62초 캡처 프레임 모두 정적 |
-| SC-007 | 백그라운드 1초 안에 갱신 정지 | `MotionPolicyTest.loopRunsOnlyForFullMotionWhileStarted` | F 미확인(액티비티가 stop 되는 것은 로그로 확인) |
-| SC-008 | 회전과 분할 크기 변경 후 유지 | 테스트 없음 | G 미확인 |
-| SC-009 | 여러 번 재생해도 같은 반응 | `PetControllerFullTest.sameSeedAndSameCallsGiveSameRenderState`, `PetPhysicsTest.sameSeedAndCallsGiveSameState`, `SoftBodyTest.sameInputGivesSameResult` | H 미확인(3회 반복 재생) |
+| SC-007 | 백그라운드 1초 안에 갱신 정지 | `MotionPolicyTest.loopRunsOnlyForFullMotionWhileStarted` | F 통과(2026-11-15, 덮은 뒤 5초 동안 프레임 0) |
+| SC-008 | 회전과 분할 크기 변경 후 유지 | 테스트 없음 | G 부분 확인(밀도 변경에서 재생 위치와 외형 유지) |
+| SC-009 | 여러 번 재생해도 같은 반응 | `PetControllerFullTest.sameSeedAndSameCallsGiveSameRenderState`, `PetPhysicsTest.sameSeedAndCallsGiveSameState`, `SoftBodyTest.sameInputGivesSameResult` | H 부분 확인(3번 모두 끝까지 재생, 이벤트별 대조는 못 함, 부하로 속도 일정하지 않음) |
 
 ## 빠진 항목 요약
 
 - 자동 테스트가 없는 요구: FR-002, FR-007, FR-012, FR-020, SC-001, SC-004, SC-005, SC-008. 그리기와 시스템 동작이라 JVM 에서 확인할 수 없다.
-- 에뮬레이터에서 미확인: 회전과 분할 크기(G, FR-012, SC-008), 백그라운드(F, J, FR-013, SC-007), 데모 3회 반복(H, SC-009), 시스템 애니메이션 끄기(I, FR-015), 정적 터치 무반응(FR-007).
+- 에뮬레이터에서 미확인 또는 부분 확인: 화면 회전과 `wm size` 변경(G, FR-012, SC-008), 데모 3회 반복의 이벤트별 대조(H, SC-009), 시스템 애니메이션 끄기(I, FR-015).
 - 사람이 승인해야 하는 항목: 시안과의 대조(FR-020, SC-001)와 정적 포즈 초안 값(`research.md` R8).
