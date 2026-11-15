@@ -18,6 +18,7 @@ import kotlin.math.min
 
 private val Pi = PI.toFloat()
 private val HoodFlat = Color(0xFFC99A1E)
+private val HoodBright = Color(0xFFFFCC33)
 private val EyeHousing = rgba(8, 12, 18, 0.55f)
 private val ClosedEyeLine = rgba(8, 12, 18, 0.65f)
 private val BodyOutline = rgba(255, 255, 255, 0.18f)
@@ -39,7 +40,8 @@ fun DrawScope.drawStaticPet(state: PetRenderState) {
     val dpScale = density
     withTransform({ scale(dpScale, dpScale, Offset.Zero) }) {
         val groundY = h * 0.8f
-        drawPetBackground(w, h, groundY, config.panelWidth)
+        // 비(우비)일 때는 배경도 어두운 푸른색이다(시안 `drawBackground` 는 정적에서도 비를 반영한다).
+        drawPetBackground(w, h, groundY, config.panelWidth, if (pose.hood) AmbientMood.RAIN else null)
 
         // 몸 기하: 시안 moving 분기(R = min(W,H) * 0.17, 깊이 1, 눌림 0, 기울임 0)
         val r = min(w, h) * config.staticRadiusFactor
@@ -59,14 +61,16 @@ fun DrawScope.drawStaticPet(state: PetRenderState) {
             val body = petBodyPath(geometry, still, w, h, config.panelWidth, 0f, reduced = true) // 숨쉬기 흔들림 없음
             drawPath(body, pose.bodyColor, style = Fill)
             drawPath(body, BodyOutline, style = Stroke(2f))
-            if (pose.hood) drawHood(cx, cy, rx, ry)
+            if (pose.hood) drawHood(cx, cy, rx, ry, flat = true)
             drawStaticEyes(pose, cx, cy, rx, ry, r)
         }
     }
 }
 
-/** 시안 `hood(cx, cy, rx, ry, flat = true)`: 위쪽 반달 모양 우비. */
-private fun DrawScope.drawHood(cx: Float, cy: Float, rx: Float, ry: Float) {
+/**
+ * 시안 `hood(cx, cy, rx, ry, flat)`: 위쪽 반달 모양 우비. [flat] 은 정적용(어두운 단색), 아니면 풀 모션용(밝은 노랑, 윤곽선, 꼭대기 단추).
+ */
+internal fun DrawScope.drawHood(cx: Float, cy: Float, rx: Float, ry: Float, flat: Boolean) {
     val oval = Rect(cx - rx * 1.08f, cy - ry * 0.05f - ry * 1.08f, cx + rx * 1.08f, cy - ry * 0.05f + ry * 1.08f)
     val path = Path().apply {
         arcTo(oval, 1.04f * 180f, 0.92f * 180f, true)
@@ -74,7 +78,11 @@ private fun DrawScope.drawHood(cx: Float, cy: Float, rx: Float, ry: Float) {
         quadraticTo(cx, cy - ry * 0.42f, cx - rx * 1.12f, cy - ry * 0.12f)
         close()
     }
-    drawPath(path, HoodFlat, style = Fill)
+    drawPath(path, if (flat) HoodFlat else HoodBright, style = Fill)
+    if (!flat) {
+        drawPath(path, rgba(120, 80, 0, 0.35f), style = Stroke(2f))
+        drawCircle(HoodBright, ry * 0.07f, Offset(cx, cy - ry * 1.12f))
+    }
 }
 
 /** 시안 moving 분기의 눈: `ew = R*.42`, `eh = R*.26`, `ey = cy - ry*.18`, `ex = rx*.4`. 눈 개별 그리기는 좌우 대칭이다. */

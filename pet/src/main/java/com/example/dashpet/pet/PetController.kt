@@ -11,7 +11,9 @@ import com.example.dashpet.engine.EventType
 import com.example.dashpet.engine.Mood
 import com.example.dashpet.engine.MotionTier
 import com.example.dashpet.engine.PetOutput
+import com.example.dashpet.signal.Side
 import com.example.dashpet.signal.TurnState
+import kotlin.math.floor
 import kotlin.random.Random
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
@@ -31,6 +33,10 @@ class PetRenderState(
     val direction: Direction4?,
     val motion: MotionMode,
     val turnSignal: TurnState,
+    /** 이번 프레임에 윙크로 감고 있는 쪽 눈. 풀 모션의 방향지시등이 켜져 있고 감는 구간일 때만 값이 있다. */
+    val wink: Side?,
+    /** 그릴 배경 감정. 풀 모션이고 엔진 감정이 편안일 때만 값이 있다(엔진 감정이 우선, 정적에서는 그리지 않는다). */
+    val ambient: AmbientMood?,
     val appearance: PetAppearance,
     val viewportWidth: Float,
     val viewportHeight: Float,
@@ -68,7 +74,11 @@ class PetController(
     private var intensity = 0f
     private var direction: Direction4? = null
     private var turnSignal = TurnState.OFF
+
+    /** 방향지시등이 켜진 순간의 물리 시계(초). 윙크 주기의 시작점이다. */
+    private var turnStartSec = 0f
     private var appearance = PetAppearance()
+    private var ambient: AmbientMood? = null
     private var reduced = false
     private var viewportW = 0f
     private var viewportH = 0f
@@ -94,6 +104,8 @@ class PetController(
                 direction = direction,
                 motion = motion,
                 turnSignal = turnSignal,
+                wink = if (full) winkSide() else null,
+                ambient = if (full) effectiveAmbient() else null,
                 appearance = appearance,
                 viewportWidth = viewportW,
                 viewportHeight = viewportH,
@@ -102,9 +114,42 @@ class PetController(
                 physics = if (full) physics.state else null,
                 particles = if (full) particles.items else emptyList(),
                 config = config,
-                staticPose = if (full) null else petPose(mood, direction, turnSignal, appearance, null, config),
+                staticPose = if (full) null else petPose(mood, direction, turnSignal, appearance, ambient, config),
             )
         }
+
+    /**
+     * 풀 모션에서 [side] 눈을 윙크로 감고 있으면 true. 방향지시등이 그쪽으로 켜져 있고, 켜진 뒤 경과 시간이
+     * `floor(경과 / 0.38초) % 2 == 0` 일 때 감는다(시안 `winkClosed`). 시계는 [step] 으로만 진행하므로 결정적이다.
+     * 모션 줄이기에서도 유지한다. 정적에서는 항상 false 다(정적은 점멸 없이 선으로 감긴 눈, [StaticPose.closedEye]).
+     */
+    fun winkClosed(side: Side): Boolean = winkSide() == side
+
+    private fun winkSide(): Side? {
+        if (motion != MotionMode.FULL) return null
+        val side = when (turnSignal) {
+            TurnState.LEFT -> Side.LEFT
+            TurnState.RIGHT -> Side.RIGHT
+            TurnState.OFF -> return null
+        }
+        val elapsed = physics.state.clockSec - turnStartSec
+        val phase = floor(elapsed / config.winkPeriodSec).toInt()
+        return if (phase % 2 == 0) side else null
+    }
+
+    /**
+     * 배경 감정(더위, 추위, 비, 조용)을 넣거나 null 로 푼다. 엔진 출력과 별개이고, 엔진 감정이 편안일 때만 보인다.
+     * 정적에서는 비의 우비 실루엣만 보이고 나머지는 별도 표현이 없다. 입력을 만드는 일은 이후 기능이다.
+     */
+    fun setAmbient(ambient: AmbientMood?) {
+        if (this.ambient == ambient) return
+        this.ambient = ambient
+        version++
+    }
+
+    /** 엔진 감정이 편안([Mood.IDLE], [Mood.AMBIENT])일 때만 배경 감정이 보인다. */
+    private fun effectiveAmbient(): AmbientMood? =
+        if (mood == Mood.IDLE || mood == Mood.AMBIENT) ambient else null
 
     /** 성격이 점프 속도를 정한다(활발 820, 그 외 650). 외형이 바뀌면 다시 호출한다. */
     fun setAppearance(appearance: PetAppearance) {
@@ -138,10 +183,13 @@ class PetController(
     fun applyOutput(output: PetOutput) {
         val previousMood = mood
         val changed = output.mood != mood || output.direction != direction || output.turnSignal != turnSignal
+        val turnChanged = output.turnSignal != turnSignal
         mood = output.mood
         intensity = output.intensity
         direction = output.direction
         turnSignal = output.turnSignal
+        // 방향지시등이 새로 켜지거나 쪽이 바뀌면 그 순간부터 380ms 주기를 센다(정적에서 풀로 넘어올 때는 enterFull 이 정한다).
+        if (turnChanged && turnSignal != TurnState.OFF) turnStartSec = physics.state.clockSec
 
         val next = if (output.tier == MotionTier.FULL) MotionMode.FULL else MotionMode.STATIC
         if (next != motion) {
@@ -169,6 +217,7 @@ class PetController(
     private fun enterFull() {
         physics.reset()
         particles.clear()
+        turnStartSec = physics.state.clockSec
         motion = MotionMode.FULL
     }
 
@@ -216,7 +265,8 @@ class PetController(
         if (dtSec > 0f) { // NaN 은 false
             particles.reportFrameTime(dtSec)
             val dt = MotionPolicy.clampDt(dtSec, config)
-            physics.step(dt, mood)
+            val ambientNow = effectiveAmbient()
+            physics.step(dt, mood, ambientNow)
             if (physics.state.splatBurst) {
                 physics.state.splatBurst = false
                 if (!reduced) particles.emitGlassBurst(viewportW, viewportH, appearance.bodyColor, random)
@@ -224,6 +274,9 @@ class PetController(
             particles.update(dt, viewportH)
             if (!reduced && mood == Mood.HAPPY) {
                 particles.emitHappySparks(dt, petGeometry(physics.state, viewportW, viewportH, config), random)
+            }
+            if (!reduced && ambientNow != null) {
+                particles.emitAmbient(ambientNow, dt, petGeometry(physics.state, viewportW, viewportH, config), viewportW, random)
             }
         }
         frame++

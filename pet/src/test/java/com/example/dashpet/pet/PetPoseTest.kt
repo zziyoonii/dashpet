@@ -130,4 +130,21 @@ class PetPoseTest {
             assertEquals(pose(m, d, TurnState.LEFT, AmbientMood.RAIN), pose(m, d, TurnState.LEFT, AmbientMood.RAIN))
         }
     }
+
+    // T064: 배경 감정은 정적에서 비의 우비 실루엣만 있고, 엔진 감정이 우선한다.
+    @Test
+    fun hotColdQuietHaveNoSeparateStaticLook() {
+        for (a in listOf(AmbientMood.HOT, AmbientMood.COLD, AmbientMood.QUIET)) {
+            assertEquals("$a", pose(), pose(ambient = a))
+        }
+    }
+
+    @Test
+    fun hoodShowsOnlyWhileTheEngineMoodIsIdle() {
+        assertTrue(pose(Mood.IDLE, ambient = AmbientMood.RAIN).hood)
+        assertTrue(pose(Mood.AMBIENT, ambient = AmbientMood.RAIN).hood)
+        for (m in listOf(Mood.HAPPY, Mood.SQUASHED, Mood.DIZZY, Mood.STARTLED)) {
+            assertFalse("$m", pose(m, ambient = AmbientMood.RAIN).hood) // 엔진 감정이 우선
+        }
+    }
 }

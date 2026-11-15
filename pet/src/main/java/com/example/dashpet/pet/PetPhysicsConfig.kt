@@ -55,6 +55,9 @@ data class PetPhysicsConfig(
     // ---- 점프 (R6 점프, 시안 onEnter 와 physics) ----
     /** 중력 px/s². 시안 `physics` 의 `S.vy -= 2600*dt`. */
     val gravity: Float = 2600f,
+    /** 방향지시등 윙크 주기(초). 시안 `winkClosed`: `floor((now - start) / 380ms) % 2 == 0` 일 때 감는다. */
+    val winkPeriodSec: Float = 0.38f,
+
     /** 기쁨 진입 점프 초기 속도. 시안 `onEnter`: 활발 820, 그 외 650. */
     val jumpVelocityLively: Float = 820f,
     val jumpVelocityDefault: Float = 650f,

@@ -5,18 +5,23 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
 private val SparkColor = Color(0xFFFFE7A3)
 private val SparkGlow = Color(0xFFFFD27A)
 private val GlassDropDefault = Color(0xFF7C95C9)
+private val SweatColor = Color(0xFF8FD3FF)
 
 /**
- * 시안 `drawParticles` 의 그리기(이동과 수명은 [Particles.update] 가 한다). 이번 단계는 반짝임과 유리 물방울만 그린다.
+ * 시안 `drawParticles` 의 그리기(이동과 수명은 [Particles.update] 가 한다). 반짝임, 유리 물방울과 배경 감정의 땀, 빗줄기, Z, 입김을 그린다.
  * `shadowBlur 10` 글로우는 별 뒤에 방사형 빛 하나를 깔아 근사한다(R7).
  */
 internal fun DrawScope.drawParticles(items: List<Particle>) {
@@ -38,7 +43,29 @@ internal fun DrawScope.drawParticles(items: List<Particle>) {
                 drawOval(col, Offset(p.x - p.size * 0.8f, p.y - p.size), Size(p.size * 1.6f, p.size * 2f))
                 drawCircle(rgba(255, 255, 255, 0.6f * a * 0.85f), p.size * 0.25f, Offset(p.x - p.size * 0.25f, p.y - p.size * 0.35f))
             }
-            else -> Unit // SWEAT, RAIN, Z, PUFF 는 배경 감정(US7)
+            ParticleType.SWEAT -> { // 땀방울: 시안 `drop(x, y, s)`
+                val s = p.size
+                val drop = Path().apply {
+                    moveTo(p.x, p.y - s * 1.4f)
+                    quadraticTo(p.x + s, p.y, p.x, p.y + s)
+                    quadraticTo(p.x - s, p.y, p.x, p.y - s * 1.4f)
+                }
+                drawPath(drop, SweatColor.copy(alpha = a))
+            }
+            ParticleType.RAIN ->
+                drawLine(rgba(160, 200, 255, 0.55f * a), Offset(p.x, p.y), Offset(p.x - 4f, p.y + 16f), strokeWidth = 1.4f)
+            ParticleType.Z -> { // 시안은 글꼴 'z' 를 그리지만 글꼴 없이 같은 크기의 선으로 그린다
+                val fs = p.size + (1f - p.life / p.max) * 8f
+                val z = Path().apply {
+                    moveTo(p.x, p.y - fs * 0.7f)
+                    lineTo(p.x + fs * 0.6f, p.y - fs * 0.7f)
+                    lineTo(p.x, p.y)
+                    lineTo(p.x + fs * 0.6f, p.y)
+                }
+                drawPath(z, rgba(220, 230, 245, 0.85f * a), style = Stroke(max(1.5f, fs * 0.14f), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            }
+            ParticleType.PUFF -> // 입김: 커지며 옅어진다
+                drawCircle(rgba(220, 235, 255, 0.5f * a), p.size * (1.6f - p.life / p.max), Offset(p.x, p.y))
         }
     }
 }

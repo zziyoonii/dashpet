@@ -74,6 +74,40 @@ private fun PreviewDizzy() = PreviewFrame(1.2f) { applyOutput(fullOutput(Mood.DI
 @Composable
 private fun PreviewStartled() = PreviewFrame(0.15f) { applyOutput(fullOutput(Mood.STARTLED)) }
 
+// ---- 방향지시등 윙크(풀 모션, 감는 구간 0.2초 / 뜨는 구간 0.5초) ----
+
+private fun fullOutput(mood: Mood, turn: TurnState) = PetOutput(mood, 0.7f, null, MotionTier.FULL, turn, 0)
+
+@Preview(name = "윙크 우(감김)", widthDp = 360, heightDp = 420)
+@Composable
+private fun PreviewWinkRightClosed() = PreviewFrame(0.2f) { applyOutput(fullOutput(Mood.IDLE, TurnState.RIGHT)) }
+
+@Preview(name = "윙크 우(뜸, 호박색 눈썹)", widthDp = 360, heightDp = 420)
+@Composable
+private fun PreviewWinkRightOpen() = PreviewFrame(0.6f) { applyOutput(fullOutput(Mood.IDLE, TurnState.RIGHT)) }
+
+@Preview(name = "윙크 좌(감김)", widthDp = 360, heightDp = 420)
+@Composable
+private fun PreviewWinkLeftClosed() = PreviewFrame(0.2f) { applyOutput(fullOutput(Mood.IDLE, TurnState.LEFT)) }
+
+// ---- 배경 감정 4종(풀 모션, 몸 모양이 자리 잡도록 1.5초) ----
+
+@Preview(name = "배경 감정 더위", widthDp = 360, heightDp = 420)
+@Composable
+private fun PreviewAmbientHot() = PreviewFrame(1.5f) { setAmbient(AmbientMood.HOT) }
+
+@Preview(name = "배경 감정 추위", widthDp = 360, heightDp = 420)
+@Composable
+private fun PreviewAmbientCold() = PreviewFrame(1.5f) { setAmbient(AmbientMood.COLD) }
+
+@Preview(name = "배경 감정 비", widthDp = 360, heightDp = 420)
+@Composable
+private fun PreviewAmbientRain() = PreviewFrame(1.5f) { setAmbient(AmbientMood.RAIN) }
+
+@Preview(name = "배경 감정 조용", widthDp = 360, heightDp = 420)
+@Composable
+private fun PreviewAmbientQuiet() = PreviewFrame(3f) { setAmbient(AmbientMood.QUIET) }
+
 // ---- 방향별 물리 반응 ----
 
 @Preview(name = "급제동 번짐(중간)", widthDp = 360, heightDp = 420)
@@ -162,3 +196,16 @@ private fun PreviewStaticWinkLeft() = StaticPreviewFrame(staticOutput(Mood.IDLE,
 @Preview(name = "정적 윙크 우", widthDp = 360, heightDp = 420)
 @Composable
 private fun PreviewStaticWinkRight() = StaticPreviewFrame(staticOutput(Mood.IDLE, turn = TurnState.RIGHT))
+
+@Preview(name = "정적 배경 감정 비(우비)", widthDp = 360, heightDp = 420)
+@Composable
+private fun PreviewStaticRain() {
+    val controller = remember {
+        PetController().also {
+            it.setViewport(PreviewW, PreviewH)
+            it.applyOutput(staticOutput(Mood.IDLE))
+            it.setAmbient(AmbientMood.RAIN)
+        }
+    }
+    Canvas(Modifier.size(PreviewW.dp, PreviewH.dp).clipToBounds()) { drawPet(controller.renderState) }
+}

@@ -29,7 +29,7 @@ data class StaticPose(
  *   앞은 [PetPhysicsConfig.staticFrontScale] 배, 뒤는 [PetPhysicsConfig.staticBackScale] 배. 방향이 없으면 곧게 선다.
  *   **[확인 필요]** 기울기, 배율, 혼합비는 시안에 근거가 없는 초안이다.
  * - 방향지시등: 같은 쪽 눈을 선으로 감고 같은 쪽에 호박색 눈썹을 둔다(점멸 없음).
- * - [ambient] 가 비([AmbientMood.RAIN])일 때만 우비를 쓴다.
+ * - [ambient] 가 비([AmbientMood.RAIN])이고 엔진 감정이 편안일 때만 우비를 쓴다(엔진 감정이 우선). 더위, 추위, 조용은 정적에서 별도 표현이 없다.
  */
 fun petPose(
     mood: Mood,
@@ -63,5 +63,6 @@ fun petPose(
         TurnState.RIGHT -> Side.RIGHT
         TurnState.OFF -> null
     }
-    return StaticPose(color, tilt, sx, sy, side, side, ambient == AmbientMood.RAIN)
+    val calm = mood == Mood.IDLE || mood == Mood.AMBIENT
+    return StaticPose(color, tilt, sx, sy, side, side, hood = calm && ambient == AmbientMood.RAIN)
 }

@@ -24,11 +24,12 @@ fun DrawScope.drawPet(state: PetRenderState) {
     val dpScale = density
     withTransform({ scale(dpScale, dpScale, Offset.Zero) }) {
         val g = petGeometry(ph, w, h, config)
-        drawPetBackground(w, h, g.groundY, panel)
+        drawPetBackground(w, h, g.groundY, panel, state.ambient)
         val body = petBodyPath(g, ph, w, h, panel, t, state.reducedMotion)
-        drawBodyBase(base, g, ph, body, t, state.reducedMotion, w, h)
+        drawBodyBase(base, g, ph, body, t, state.reducedMotion, w, h, state.ambient)
         drawContactGlow(w, panel, ph.pen, ph.ox, g.cy, g.ry)
-        drawFace(state.mood, base, state.appearance.personality, g, ph, t)
+        drawAmbientBodyExtras(base, g, t, state.ambient)
+        drawFace(state.mood, base, state.appearance.personality, g, ph, t, state.turnSignal, state.wink, state.ambient)
         drawBodyGlassOverlay(g, body, w, h)
         drawParticles(state.particles)
         drawGlass(ph, w, h, config.smudgeDurationSec)

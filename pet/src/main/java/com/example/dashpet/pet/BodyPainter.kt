@@ -62,6 +62,13 @@ internal fun petBodyPath(g: PetGeometry, ph: PetPhysicsState, w: Float, h: Float
     return path
 }
 
+/** 더위는 붉은 기(#ff7a59 0.28), 추위는 푸른 기(#9cc8ff 0.3)가 몸 색에 섞인다. 그 밖에는 몸 색 그대로. */
+internal fun ambientBodyColor(base: Color, ambient: AmbientMood?): Color = when (ambient) {
+    AmbientMood.HOT -> mixColor(base, Color(0xFFFF7A59), 0.28f)
+    AmbientMood.COLD -> mixColor(base, Color(0xFF9CC8FF), 0.3f)
+    else -> base
+}
+
 /**
  * 몸의 바닥 쪽 그리기(시안 `drawPet` 의 몸 부분): 속도선, 눌린 자국, 그림자, 그라데이션 몸, 윤곽선, 광택.
  * 얼굴은 이 위에, 유리 번짐 덮개([drawBodyGlassOverlay])는 얼굴 위에 그린다.
@@ -75,8 +82,11 @@ internal fun DrawScope.drawBodyBase(
     reduced: Boolean,
     w: Float,
     h: Float,
+    ambient: AmbientMood? = null,
 ) {
     val e = g.e
+    // 아래쪽 어두운 끝은 원래 몸 색 기준이다.
+    val bodyCol = ambientBodyColor(base, ambient)
     drawSpeedLines(g.cx, g.cy, g.lean, t, reduced, w, h)
     drawDent(g.cx, g.cy, g.rx, g.ry, g.lean)
 
@@ -90,14 +100,14 @@ internal fun DrawScope.drawBodyBase(
 
     // 몸: 위가 밝고 아래가 어두운 그라데이션과 윤곽선
     val brush = Brush.verticalGradient(
-        0f to mixColor(base, Color.White, 0.32f - 0.12f * e),
-        0.55f to base,
+        0f to mixColor(bodyCol, Color.White, 0.32f - 0.12f * e),
+        0.55f to bodyCol,
         1f to mixColor(base, Color.Black, 0.3f - 0.1f * e),
         startY = g.cy - g.ry,
         endY = g.cy + g.ry * 0.75f,
     )
     drawPath(body, brush)
-    drawPath(body, if (luminance(base) < 0.3f) rgba(255, 255, 255, 0.28f) else rgba(255, 255, 255, 0.2f), style = Stroke(2f))
+    drawPath(body, rgba(255, 255, 255, PetPalette.outlineAlpha(base)), style = Stroke(2f))
 
     // 광택(몸 안쪽만)
     val hiAlpha = 1f - e * 0.7f
@@ -116,7 +126,31 @@ internal fun DrawScope.drawBodyBase(
                 Size(g.rx * 0.14f, g.ry * 0.12f),
             )
         }
+        // 추위의 서리: 몸 윗부분에 옅은 푸른 띠
+        if (ambient == AmbientMood.COLD) {
+            drawRect(rgba(210, 235, 255, 0.18f), Offset(g.cx - g.rx * 1.2f, g.cy - g.ry * 1.1f), Size(g.rx * 2.4f, g.ry * 0.55f))
+        }
     }
+}
+
+/**
+ * 배경 감정의 몸 덧그림(벽 접촉 빛 다음, 얼굴 앞). 더위는 바닥으로 녹아내린 방울 세 개(눌림이 적을 때만),
+ * 비는 노란 우비(눌림이 적을 때만)다. 시계 [t] 는 컨트롤러의 물리 시계다.
+ */
+internal fun DrawScope.drawAmbientBodyExtras(base: Color, g: PetGeometry, t: Float, ambient: AmbientMood?) {
+    val e = g.e
+    if (ambient == AmbientMood.HOT && e < 0.3f) {
+        val bodyCol = ambientBodyColor(base, AmbientMood.HOT)
+        val drip = mixColor(bodyCol, Color.Black, 0.18f)
+        val by = g.groundY - 1f
+        listOf(-0.55f, -0.1f, 0.42f).forEachIndexed { i, o ->
+            val len = 6f + 4f * sin(t * 2f + i * 2f)
+            val rx = 5f
+            val ry = len * 0.6f + 3f
+            drawOval(drip, Offset(g.cx + g.rx * o - rx, by + len * 0.3f - ry), Size(rx * 2, ry * 2))
+        }
+    }
+    if (ambient == AmbientMood.RAIN && e < 0.4f) drawHood(g.cx, g.cy, g.rx, g.ry, flat = false)
 }
 
 private fun Float.toDegrees(): Float = (this * 180.0 / PI).toFloat()

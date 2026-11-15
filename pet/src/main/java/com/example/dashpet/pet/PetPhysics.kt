@@ -156,8 +156,10 @@ class PetPhysics(
     /**
      * 시계를 [dt] 초 진행하고 물리를 한 번 계산한다. [dt] 는 호출하는 쪽이 (0, 1/30] 로 자른 값이다.
      * [mood] 는 어지러움(좌우 비틀거림)과 깜짝(작은 목표 스케일), 편안(숨쉬기, 깜빡임)에 쓴다.
+     * [ambient] 는 엔진 감정이 편안일 때만 넘기는 배경 감정이다(더위, 추위, 조용은 목표 스케일을 바꾸고 깜빡임을 멈추며,
+     * 추위는 모션 줄이기가 아닐 때 떤다. 비는 숨쉬기와 깜빡임을 그대로 둔다).
      */
-    fun step(dt: Float, mood: Mood) {
+    fun step(dt: Float, mood: Mood, ambient: AmbientMood? = null) {
         val st = state
         st.clockSec += dt
         val t = st.clockSec
@@ -291,6 +293,12 @@ class PetPhysics(
             tsx = 1.13f; tsy = 0.85f
         } else if (mood == Mood.STARTLED) {
             tsx = 0.86f; tsy = 0.9f
+        } else if (ambient == AmbientMood.HOT) {
+            tsx = 1.24f; tsy = 0.74f
+        } else if (ambient == AmbientMood.QUIET) {
+            tsx = 1.06f; tsy = 0.9f + 0.02f * br
+        } else if (ambient == AmbientMood.COLD) {
+            tsx = 0.94f; tsy = 0.95f
         } else {
             tsx = 1f - 0.018f * br; tsy = 1f + 0.028f * br
         }
@@ -307,7 +315,7 @@ class PetPhysics(
         st.smudge?.let { if ((t - it.startSec) / config.smudgeDurationSec >= 1f) st.smudge = null }
 
         // 눈 깜빡임 일정(시안 `drawPet`): 편안할 때만 2.6~5.2초마다.
-        if (mood == Mood.IDLE || mood == Mood.AMBIENT) {
+        if ((mood == Mood.IDLE || mood == Mood.AMBIENT) && (ambient == null || ambient == AmbientMood.RAIN)) {
             if (t > st.blinkNextSec) {
                 st.blinkStartSec = t
                 st.blinkNextSec = t + 2.6f + random.nextFloat() * 2.6f
@@ -317,6 +325,10 @@ class PetPhysics(
         if (mood == Mood.STARTLED && !reducedMotion) {
             st.jitterX = (random.nextFloat() - 0.5f) * 3f
             st.jitterY = (random.nextFloat() - 0.5f) * 2f
+        } else if (ambient == AmbientMood.COLD && !reducedMotion) {
+            // 추위의 떨림(시안 `jx = sin(t * 60) * 1.6`). 난수 없이 시계만 쓴다.
+            st.jitterX = sin(t * 60f) * 1.6f
+            st.jitterY = 0f
         } else {
             st.jitterX = 0f
             st.jitterY = 0f

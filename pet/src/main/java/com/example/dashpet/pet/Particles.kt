@@ -6,7 +6,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-/** 파티클 종류(data-model). 이번 단계는 [SPARK] 와 [GLASS_DROP] 만 만든다. 나머지는 배경 감정(US7)에서 쓴다. */
+/** 파티클 종류(data-model). [SWEAT], [RAIN], [Z], [PUFF] 는 배경 감정이 만든다. */
 enum class ParticleType { SPARK, SWEAT, RAIN, Z, PUFF, GLASS_DROP }
 
 /** 파티클 하나. 시안 `spawn` 의 `{type, x, y, vx, vy, life, max, size, col}`. */
@@ -85,6 +85,30 @@ class Particles(private val config: PetPhysicsConfig = PetPhysicsConfig()) {
             val vy = -60f - random.nextFloat() * 60f
             val size = 4f + random.nextFloat() * 4f
             spawn(ParticleType.SPARK, x, y, vx, vy, 0.9f, size)
+        }
+    }
+
+    /**
+     * 배경 감정의 파티클(시안 `emitters`, 정차 중): 더위는 땀(확률 `dt * 3.5`), 비는 빗줄기(`dt * 55`), 조용은 Z(`dt * 1.1`),
+     * 추위는 입김(`dt * 1.6`)을 한 프레임에 하나씩. 성능 저하 중에는 만들지 않는다. 해당하는 종류가 아니면 난수를 쓰지 않는다.
+     * [w] 는 표시 영역 너비(빗줄기가 떨어지기 시작하는 가로 범위)다.
+     */
+    fun emitAmbient(ambient: AmbientMood?, dt: Float, g: PetGeometry, w: Float, random: Random) {
+        if (throttled || ambient == null) return
+        when (ambient) {
+            AmbientMood.HOT -> if (random.nextFloat() < dt * 3.5f) {
+                val s = if (random.nextFloat() < .5f) -1f else 1f
+                spawn(ParticleType.SWEAT, g.cx + s * g.rx * 0.78f, g.cy - g.ry * 0.45f, s * 50f, -40f, 1.1f, 5f)
+            }
+            AmbientMood.RAIN -> if (random.nextFloat() < dt * 55f) {
+                spawn(ParticleType.RAIN, random.nextFloat() * w, -10f, -60f, 900f, 1.2f, 1f)
+            }
+            AmbientMood.QUIET -> if (random.nextFloat() < dt * 1.1f) {
+                spawn(ParticleType.Z, g.cx + g.rx * 0.55f, g.cy - g.ry * 0.8f, 22f, -34f, 2.4f, 14f)
+            }
+            AmbientMood.COLD -> if (random.nextFloat() < dt * 1.6f) {
+                spawn(ParticleType.PUFF, g.cx + g.rx * 0.08f, g.cy + g.ry * 0.2f, 30f, -18f, 1.4f, 6f)
+            }
         }
     }
 

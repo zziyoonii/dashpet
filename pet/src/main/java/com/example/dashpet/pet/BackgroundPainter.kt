@@ -9,15 +9,18 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlin.math.min
 import kotlin.math.sign
 
-private val BgTop = Color(0xFF121A25)
-private val BgBottom = Color(0xFF0B1017)
-
 /**
- * 시안 `drawBackground`(홈 화면, 배경 감정 없음): 위아래 그라데이션, 32px 격자선, 바닥 빛, 바닥선, 양쪽 패널(벽).
- * 좌표는 논리 단위이고 호출하는 쪽이 밀도 배율을 적용해 둔다.
+ * 시안 `drawBackground`(홈 화면): 위아래 그라데이션(배경 감정에 따라 색이 바뀐다), 32px 격자선, 바닥 빛, 바닥선, 양쪽 패널(벽).
+ * 비는 어두운 푸른색, 더위는 붉은 기, 추위는 푸른 기가 돈다. 좌표는 논리 단위이고 호출하는 쪽이 밀도 배율을 적용해 둔다.
  */
-internal fun DrawScope.drawPetBackground(w: Float, h: Float, groundY: Float, panel: Float) {
-    drawRect(Brush.verticalGradient(listOf(BgTop, BgBottom), startY = 0f, endY = h), size = Size(w, h))
+internal fun DrawScope.drawPetBackground(w: Float, h: Float, groundY: Float, panel: Float, ambient: AmbientMood? = null) {
+    val (top, bottom) = when (ambient) {
+        AmbientMood.RAIN -> PetPalette.BgRainTop to PetPalette.BgRainBottom
+        AmbientMood.HOT -> PetPalette.BgHotTop to PetPalette.BgHotBottom
+        AmbientMood.COLD -> PetPalette.BgColdTop to PetPalette.BgColdBottom
+        else -> PetPalette.BgDefaultTop to PetPalette.BgDefaultBottom
+    }
+    drawRect(Brush.verticalGradient(listOf(top, bottom), startY = 0f, endY = h), size = Size(w, h))
     // 격자선: 1px, x + .5 위치, 바닥선까지
     val gridColor = rgba(255, 255, 255, 0.035f)
     var x = 0f
