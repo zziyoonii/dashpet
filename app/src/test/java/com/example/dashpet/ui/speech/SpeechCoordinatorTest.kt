@@ -37,7 +37,8 @@ class SpeechCoordinatorTest {
     private class FakeOutput : SpeechOutput {
         val ch = Channel<SpeechState>(Channel.UNLIMITED)
         override val states: Flow<SpeechState> = ch.receiveAsFlow()
-        override val availability: StateFlow<VoiceAvailability> = MutableStateFlow(VoiceAvailability.READY)
+        val ready = MutableStateFlow(VoiceAvailability.READY)
+        override val availability: StateFlow<VoiceAvailability> = ready
         val ops = mutableListOf<String>()
         var released = false
         override fun speak(id: Long, text: String) { ops += "speak:$text" }
@@ -80,10 +81,12 @@ class SpeechCoordinatorTest {
         runCurrent()
         assertEquals("안전벨트를 확인했어요.", r.coordinator.bubble.value?.text) // FULL: 말풍선 + 음성
         r.tier(MotionTier.STATIC)
-        assertNull(r.coordinator.bubble.value)
+        assertNotNull(r.coordinator.bubble.value) // 제한이 걸려도 떠 있던 말풍선은 그대로 둔다
+        r.fake.end(1); runCurrent() // 앞의 말이 끝나야 다음 말이 이어진다
         r.coordinator.debugSpeak(EventType.TRIP_START)
         runCurrent()
-        assertNull(r.coordinator.bubble.value) // 제한 중에는 글자 없음
+        assertNotNull(r.coordinator.bubble.value) // 제한 중에도 전체 문장 말풍선
+        assertEquals(EventType.TRIP_START, r.coordinator.bubble.value?.eventType)
     }
 
     @Test fun debugSpeakIgnoredInBackground() = runTest {
@@ -119,24 +122,22 @@ class SpeechCoordinatorTest {
         assertEquals(EventType.HARD_BRAKE, r.coordinator.bubble.value?.eventType)
     }
 
-    @Test fun staticTierNeverShowsBubbleButSpeaksShortText() = runTest {
+    @Test fun staticTierShowsFullBubbleButSpeaksShortText() = runTest {
         val r = rig()
         r.tier(MotionTier.STATIC)
         r.event(EventType.HARD_ACCEL)
-        assertNull(r.coordinator.bubble.value)
-        assertEquals(listOf("speak:부드럽게 가요."), r.fake.ops)
+        assertEquals("출발이 조금 급했어요. 부드럽게 가요.", r.coordinator.bubble.value?.text) // 말풍선은 전체 문장
+        assertEquals(listOf("speak:부드럽게 가요."), r.fake.ops) // 음성은 짧은 한 문장
     }
 
-    @Test fun bubbleClearsImmediatelyWhenRestrictionBegins() = runTest {
+    @Test fun bubbleStaysWhenRestrictionBeginsAndExpiresOnItsOwn() = runTest {
         val r = rig()
         r.event(EventType.HARD_ACCEL)
         assertNotNull(r.coordinator.bubble.value)
-        val t0 = currentTime
         r.tier(MotionTier.STATIC)
-        assertNull(r.coordinator.bubble.value)
-        assertTrue(currentTime - t0 <= 1_000)
-        r.tier(MotionTier.FULL)
-        assertNull(r.coordinator.bubble.value) // 되살리지 않는다
+        assertNotNull(r.coordinator.bubble.value) // 제한이 걸려도 지우지 않는다
+        advanceTimeBy(60_000); runCurrent()
+        assertNull(r.coordinator.bubble.value) // 표시 시간이 지나면 스스로 사라진다
     }
 
     @Test fun preemptionStopsThenSpeaks() = runTest {
@@ -235,5 +236,106 @@ class SpeechCoordinatorTest {
         r.fake.ch.trySend(SpeechState.Failed(1, FailReason.NO_FOCUS)); runCurrent()
         r.event(EventType.COLLISION_RISK) // 말하는 중이 아니므로 바로 말한다(선점 stop 없음)
         assertFalse("stop" in r.fake.ops)
+    }
+
+    // --- specs/005: 성격 말투, 음성 5분 간격, 첫 인사 ---
+
+    @Test fun setToneChangesSentences() = runTest {
+        val r = rig()
+        r.coordinator.setTone(com.example.dashpet.engine.speech.SpeechTone.LIVELY)
+        r.event(EventType.HARD_CORNER)
+        assertEquals("으앗! 커브가 너무 급했어! 속도를 줄이자!", r.coordinator.bubble.value?.text)
+    }
+
+    @Test fun sameEventAfterGapKeepsBubbleButIsSilent() = runTest {
+        val r = rig()
+        r.event(EventType.HARD_ACCEL)
+        r.fake.end(1); runCurrent()
+        advanceTimeBy(20_000); runCurrent()
+        r.event(EventType.HARD_ACCEL)
+        assertNotNull(r.coordinator.bubble.value) // 말풍선은 다시 뜬다
+        assertEquals(1, r.fake.ops.count { it.startsWith("speak:") }) // 소리는 5분에 한 번
+    }
+
+    @Test fun silentBubbleDoesNotBlockTheNextSpeech() = runTest {
+        val r = rig()
+        r.event(EventType.HARD_ACCEL)
+        r.fake.end(1); runCurrent()
+        advanceTimeBy(20_000); runCurrent()
+        r.event(EventType.HARD_ACCEL) // 소리 없는 말풍선
+        r.event(EventType.COLLISION_RISK) // 소리 없는 말이 끝난 것으로 처리되어 바로 말한다
+        assertEquals(2, r.fake.ops.count { it.startsWith("speak:") })
+        assertFalse("stop" in r.fake.ops)
+    }
+
+    @Test fun staticTierRepeatsBubbleSilentlyWithinFiveMinutes() = runTest {
+        val r = rig()
+        r.tier(MotionTier.STATIC)
+        r.event(EventType.HARD_ACCEL)
+        r.fake.end(1); runCurrent()
+        advanceTimeBy(20_000); runCurrent()
+        r.event(EventType.HARD_ACCEL)
+        assertEquals(1, r.fake.ops.count { it.startsWith("speak:") }) // 소리는 5분에 한 번
+        assertNotNull(r.coordinator.bubble.value) // 말풍선은 다시 뜬다
+    }
+
+    @Test fun debugSpeakBypassesVoiceCooldown() = runTest {
+        val r = rig()
+        r.coordinator.debugSpeak(EventType.SEATBELT_OK); runCurrent()
+        r.fake.end(1); runCurrent()
+        r.coordinator.debugSpeak(EventType.SEATBELT_OK); runCurrent()
+        assertEquals(2, r.fake.ops.count { it.startsWith("speak:") })
+    }
+
+    @Test fun sayShowsBubbleAndSpeaksWhenFull() = runTest {
+        val r = rig()
+        assertTrue(r.coordinator.say("나 이제 장수예요. 오래오래 같이 달려요."))
+        runCurrent()
+        assertEquals("나 이제 장수예요. 오래오래 같이 달려요.", r.coordinator.bubble.value?.text)
+        assertEquals(listOf("speak:나 이제 장수예요. 오래오래 같이 달려요."), r.fake.ops)
+    }
+
+    @Test fun sayDoesNothingWhenNotFull() = runTest {
+        val r = rig()
+        r.tier(MotionTier.STATIC)
+        assertFalse(r.coordinator.say("안녕"))
+        runCurrent()
+        assertNull(r.coordinator.bubble.value)
+        assertTrue(r.fake.ops.isEmpty())
+    }
+
+    @Test fun sayRespectsVoiceOffButStillShowsBubble() = runTest {
+        val r = rig(MemoryVoiceSettings(false))
+        assertTrue(r.coordinator.say("안녕"))
+        runCurrent()
+        assertNotNull(r.coordinator.bubble.value)
+        assertTrue(r.fake.ops.none { it.startsWith("speak:") })
+    }
+
+    @Test fun sayIsIgnoredInBackground() = runTest {
+        val r = rig()
+        r.coordinator.onBackground()
+        assertFalse(r.coordinator.say("안녕"))
+    }
+
+    @Test fun sayWaitsForVoiceReadyThenSpeaks() = runTest {
+        val r = rig()
+        r.fake.ready.value = VoiceAvailability.UNKNOWN
+        assertTrue(r.coordinator.say("안녕"))
+        runCurrent()
+        assertNotNull(r.coordinator.bubble.value) // 말풍선은 바로 뜬다
+        assertTrue(r.fake.ops.isEmpty())
+        r.fake.ready.value = VoiceAvailability.READY; runCurrent()
+        assertEquals(listOf("speak:안녕"), r.fake.ops)
+    }
+
+    @Test fun sayGivesUpOnVoiceIfNeverReady() = runTest {
+        val r = rig()
+        r.fake.ready.value = VoiceAvailability.UNAVAILABLE
+        r.coordinator.say("안녕"); runCurrent()
+        advanceTimeBy(3_100); runCurrent()
+        assertTrue(r.fake.ops.isEmpty())
+        r.fake.ready.value = VoiceAvailability.READY; runCurrent()
+        assertTrue("시간이 지난 뒤에는 말하지 않는다", r.fake.ops.isEmpty())
     }
 }

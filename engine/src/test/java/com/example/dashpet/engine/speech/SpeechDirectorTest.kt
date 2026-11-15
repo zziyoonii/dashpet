@@ -33,33 +33,25 @@ class SpeechDirectorTest {
         )
     }
 
-    @Test fun staticTierHasNoBubbleAndShortText() {
+    @Test fun staticTierShowsFullBubbleAndSpeaksShortText() {
         val d = director()
         val s = d.speakOf(d.onEvent(ev(EventType.HARD_ACCEL), MotionTier.STATIC, 0))
-        assertFalse(s.showBubble); assertTrue(s.useShortText)
+        assertTrue(s.showBubble); assertTrue(s.useShortText) // 말풍선은 전체 문장, 음성만 짧게
+        assertEquals("출발이 조금 급했어요. 부드럽게 가요.", s.utterance.text)
         assertEquals("부드럽게 가요.", s.spokenText)
     }
 
-    @Test fun oneShotTierIsNotFull() {
+    @Test fun oneShotTierShowsBubbleAndSpeaksShortText() {
         val d = director()
-        assertFalse(d.speakOf(d.onEvent(ev(EventType.HARD_ACCEL), MotionTier.ONE_SHOT, 0)).showBubble)
+        val s = d.speakOf(d.onEvent(ev(EventType.HARD_ACCEL), MotionTier.ONE_SHOT, 0))
+        assertTrue(s.showBubble); assertTrue(s.useShortText)
     }
 
-    @Test fun fullToStaticHidesBubbleOnlyWhenVisible() {
+    @Test fun leavingFullDoesNotHideTheBubble() {
         val d = director()
         d.onOutput(MotionTier.FULL, 0)
-        assertEquals(emptyList<SpeechCommand>(), d.onOutput(MotionTier.STATIC, 1)) // 떠 있는 말풍선 없음
-        d.onOutput(MotionTier.FULL, 2)
         d.onEvent(ev(EventType.HARD_ACCEL), MotionTier.FULL, 3)
-        assertEquals(listOf<SpeechCommand>(HideBubble), d.onOutput(MotionTier.STATIC, 4))
-        assertEquals(emptyList<SpeechCommand>(), d.onOutput(MotionTier.STATIC, 5))
-    }
-
-    @Test fun staticToFullDoesNotRevive() {
-        val d = director()
-        d.onOutput(MotionTier.STATIC, 0)
-        d.onEvent(ev(EventType.HARD_ACCEL), MotionTier.STATIC, 1)
-        assertEquals(emptyList<SpeechCommand>(), d.onOutput(MotionTier.FULL, 2))
+        assertEquals(emptyList<SpeechCommand>(), d.onOutput(MotionTier.STATIC, 4)) // 제한이 걸려도 지우지 않는다
     }
 
     @Test fun cooldownSuppressesSameType() {
@@ -125,7 +117,8 @@ class SpeechDirectorTest {
         d.onEvent(ev(EventType.HARD_BRAKE), MotionTier.FULL, 10)
         d.onOutput(MotionTier.STATIC, 20)
         val next = d.onSpeechEnded(first.id, 30).filterIsInstance<Speak>().single()
-        assertFalse(next.showBubble)
+        assertTrue(next.showBubble) // 말풍선은 제한 중에도 보인다
+        assertTrue(next.useShortText) // 대기하는 사이 제한이 걸리면 음성은 짧은 문장
     }
 
     @Test fun tripEndSpokenOnce() {
@@ -133,6 +126,15 @@ class SpeechDirectorTest {
         val a = d.speakOf(d.onEvent(ev(EventType.TRIP_END), MotionTier.FULL, 0))
         d.onSpeechEnded(a.id, 10)
         assertEquals(emptyList<SpeechCommand>(), d.onEvent(ev(EventType.TRIP_END), MotionTier.FULL, 100_000))
+    }
+
+    @Test fun tripEndIsSpokenAgainOnTheNextTrip() {
+        val d = director()
+        val a = d.speakOf(d.onEvent(ev(EventType.TRIP_END), MotionTier.FULL, 0))
+        d.onSpeechEnded(a.id, 10)
+        val start = d.speakOf(d.onEvent(ev(EventType.TRIP_START), MotionTier.STATIC, 1_000)) // 다음 주행이 시작됐다
+        d.onSpeechEnded(start.id, 1_500)
+        assertEquals(1, d.onEvent(ev(EventType.TRIP_END), MotionTier.FULL, 400_000).filterIsInstance<Speak>().size)
     }
 
     @Test fun resetClearsEverything() {
@@ -151,6 +153,6 @@ class SpeechDirectorTest {
         val a = d.speakOf(d.onEvent(ev(EventType.HARD_ACCEL), MotionTier.FULL, 0))
         d.onSpeechEnded(a.id, 1)
         d.onBubbleExpired()
-        assertEquals(emptyList<SpeechCommand>(), d.onOutput(MotionTier.STATIC, 2)) // 이미 사라진 말풍선은 다시 지우지 않음
+        assertEquals(emptyList<SpeechCommand>(), d.reset()) // 이미 사라진 말풍선은 다시 지우지 않음
     }
 }

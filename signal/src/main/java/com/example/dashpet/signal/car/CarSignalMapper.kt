@@ -1,9 +1,15 @@
 package com.example.dashpet.signal.car
 
+import com.example.dashpet.signal.BrakePedal
+import com.example.dashpet.signal.Heading
 import com.example.dashpet.signal.ParkedState
 import com.example.dashpet.signal.Restriction
 import com.example.dashpet.signal.RestrictionState
 import com.example.dashpet.signal.Speed
+import com.example.dashpet.signal.TurnSignal
+import com.example.dashpet.signal.TurnState
+import com.example.dashpet.signal.VehicleWarning
+import com.example.dashpet.signal.WarningType
 import kotlin.math.max
 
 /**
@@ -17,6 +23,9 @@ class CarSignalMapper(private val clock: () -> Long, private val startMs: Long) 
     private var lastRestriction: RestrictionState? = null
     private var lastSpeedMps: Float? = null
     private var lastParked: Boolean? = null
+    private var lastBrake: Boolean? = null
+    private var lastTurn: TurnState? = null
+    private var lastSeatbelt: Boolean? = null
 
     /** 가장 최근 호출에서 쓴 시각. 호출 직후 진단에 같은 시각을 쓰려고 시계를 다시 읽지 않게 한다. */
     val lastMs: Long get() = lastTimeMs
@@ -42,6 +51,10 @@ class CarSignalMapper(private val clock: () -> Long, private val startMs: Long) 
     /** 차량 서비스가 끊김: 제한을 알 수 없음으로. 이미 알 수 없음으로 보냈으면 null. */
     fun lost(): Restriction? {
         val t = now()
+        // 끊겼다 돌아오면 같은 값도 다시 알려야 하므로 값 비교 기준을 비운다.
+        lastBrake = null
+        lastTurn = null
+        lastSeatbelt = null
         if (lastRestriction == RestrictionState.UNKNOWN) return null
         lastRestriction = RestrictionState.UNKNOWN
         return Restriction(t, RestrictionState.UNKNOWN)
@@ -76,6 +89,41 @@ class CarSignalMapper(private val clock: () -> Long, private val startMs: Long) 
         if (parked == lastParked) return null
         lastParked = parked
         return ParkedState(t, parked)
+    }
+
+    /** 브레이크 페달. 직전에 보낸 값과 같으면 null. */
+    fun brake(pressed: Boolean): BrakePedal? {
+        val t = now()
+        if (pressed == lastBrake) return null
+        lastBrake = pressed
+        return BrakePedal(t, pressed)
+    }
+
+    /** 방향지시등. 직전에 보낸 값과 같으면 null. */
+    fun turnSignal(state: TurnState): TurnSignal? {
+        val t = now()
+        if (state == lastTurn) return null
+        lastTurn = state
+        return TurnSignal(t, state)
+    }
+
+    /** 안전벨트 미착용 경고. 직전에 보낸 값과 같으면 null. */
+    fun seatbelt(active: Boolean): VehicleWarning? {
+        val t = now()
+        if (active == lastSeatbelt) return null
+        lastSeatbelt = active
+        return VehicleWarning(t, WarningType.SEATBELT, active)
+    }
+
+    /**
+     * 방위각(도). 0 이상 360 이하의 유한한 값만 받는다(360 은 0 으로 정규화). 모를 때 쓰는 표식(-1 등)과 범위 밖 값은 버린다.
+     * 같은 값이 이어져도 보낸다: 엔진은 샘플 간격으로 변화율을 구하므로 시각이 진행되어야 한다.
+     * `[확인 필요]` FusedLocation heading 의 단위와 기준 방향은 문서에 없다(도, 북 기준 시계 방향으로 가정).
+     */
+    fun heading(deg: Float): Heading? {
+        val t = now()
+        if (!deg.isFinite() || deg < 0f || deg > 360f) return null
+        return Heading(t, deg)
     }
 
     companion object {

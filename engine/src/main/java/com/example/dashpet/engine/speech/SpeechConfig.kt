@@ -5,7 +5,12 @@ package com.example.dashpet.engine.speech
  * 값을 바꿀 때는 이 파일만 고친다.
  */
 data class SpeechConfig(
-    /** 같은 이벤트 종류를 다시 말하기까지의 간격(ms). 우선순위별 `[확인 필요]`. */
+    /**
+     * 같은 종류의 펫 음성을 다시 내기까지의 간격(ms). 심사 문서의 "같은 종류의 펫 음성은 5분에 한 번까지만"을 따른다.
+     * 이 간격 안에서도 모션 등급이 `FULL` 이면 말풍선은 아래 [cooldownMs] 간격마다 다시 뜬다(소리만 없다).
+     */
+    val voiceCooldownMs: Long = 5 * 60 * 1000L,
+    /** 같은 이벤트 종류를 다시 보여주기까지의 짧은 간격(ms). 우선순위별 `[확인 필요]`. */
     val cooldownMs: Map<SpeechPriority, Long> = mapOf(
         SpeechPriority.DANGER to 10_000L,
         SpeechPriority.WARN to 8_000L,
@@ -25,6 +30,7 @@ data class SpeechConfig(
 ) {
     init {
         require(SpeechPriority.entries.all { cooldownMs[it]?.let { v -> v >= 0 } == true }) { "cooldownMs must have a non-negative value for every priority" }
+        require(voiceCooldownMs >= 0) { "voiceCooldownMs must be >= 0" }
         require(queueMaxAgeMs >= 0) { "queueMaxAgeMs must be >= 0" }
         require(bubbleDurationMs >= 0) { "bubbleDurationMs must be >= 0" }
         require(restrictedMaxChars > 0) { "restrictedMaxChars must be > 0" }

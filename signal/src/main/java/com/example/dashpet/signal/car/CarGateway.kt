@@ -1,5 +1,6 @@
 package com.example.dashpet.signal.car
 
+import com.example.dashpet.signal.TurnState
 import kotlinx.coroutines.flow.Flow
 
 /** 차량 쪽에서 올라오는 원시 사건. Android 타입을 담지 않는다(`contracts/car-signal-source.md` 3절). */
@@ -13,6 +14,18 @@ sealed interface CarEvent {
     /** `CarUxRestrictions` 의 두 값. */
     data class RestrictionChanged(val requiresDo: Boolean, val activeRestrictions: Int) : CarEvent
 
+    /** 브레이크 페달(Pleos Vehicle SDK `Brake`). true 가 눌림. */
+    data class BrakePedalChanged(val pressed: Boolean) : CarEvent
+
+    /** 방향지시등(Pleos Vehicle SDK `TurnSignal`). 꺼짐, 좌, 우 세 값뿐이다. */
+    data class TurnSignalChanged(val state: TurnState) : CarEvent
+
+    /** 안전벨트 미착용 경고(Pleos Vehicle SDK `Safety`). true 가 경고 켜짐(미착용). */
+    data class SeatbeltWarningChanged(val active: Boolean) : CarEvent
+
+    /** 방위각(도). FusedLocation 의 `heading`. 좌표는 이 이벤트에 담지 않고 게이트웨이가 바로 버린다. */
+    data class HeadingChanged(val degrees: Float) : CarEvent
+
     /** 차량 서비스가 준비됨. 게이트웨이는 이어서 현재 값을 위 이벤트로 한 번씩 내보낸다. */
     data object Ready : CarEvent
 
@@ -23,7 +36,7 @@ sealed interface CarEvent {
     data class AvailabilityChanged(val signal: CarSignal, val availability: SignalAvailability) : CarEvent
 }
 
-enum class CarSignal { SPEED, GEAR, RESTRICTION }
+enum class CarSignal { SPEED, GEAR, RESTRICTION, BRAKE, TURN_SIGNAL, SEATBELT, HEADING }
 
 /** 신호별로 값을 받을 수 있는지와 그 이유. */
 enum class SignalAvailability {

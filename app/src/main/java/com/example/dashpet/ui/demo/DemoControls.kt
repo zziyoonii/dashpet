@@ -71,6 +71,9 @@ fun DemoControls(
     voiceEnabled: Boolean = true,
     onVoiceEnabled: (Boolean) -> Unit = {},
     onDebugSpeak: () -> Unit = {},
+    ambient: com.example.dashpet.pet.AmbientMood? = null,
+    onAmbient: (com.example.dashpet.pet.AmbientMood?) -> Unit = {},
+    onRename: () -> Unit = {},
 ) {
     if (!demo.debugAvailable) return
     Column(
@@ -105,7 +108,12 @@ fun DemoControls(
                 Text("음성", color = PetPalette.Ink, fontSize = 14.sp)
                 Switch(checked = voiceEnabled, onCheckedChange = onVoiceEnabled, enabled = output.tier == MotionTier.FULL)
             }
+            OutlinedButton(
+                onClick = onRename,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = PetPalette.Ink),
+            ) { Text("이름 짓기", fontSize = 14.sp) }
             if (demo.mode == SignalMode.DEMO) {
+                AmbientChips(ambient, onAmbient)
                 Button(
                     onClick = onTogglePlay,
                     colors = ButtonDefaults.buttonColors(containerColor = PetPalette.Accent, contentColor = PetPalette.Bg),
@@ -148,7 +156,7 @@ fun DemoControls(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
-                            signalDiagnosticLines(d).forEach { Text(it, color = PetPalette.Ink, fontSize = 14.sp) }
+                            (signalDiagnosticLines(d) + extraSignalDiagnosticLines(d)).forEach { Text(it, color = PetPalette.Ink, fontSize = 14.sp) }
                         }
                     }
                 }
