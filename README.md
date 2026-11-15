@@ -57,7 +57,6 @@ Pleos Connect(Android Automotive OS 기반) 차량용 앱입니다.
 
 | 항목 | 값 |
 |-|-|
-| 개발 PC | macOS (Apple Silicon) |
 | 빌드 도구 | Gradle 9.6.0, Android Gradle Plugin 9.5.0, Kotlin 2.2.10, Compose BOM 2025.01.01 |
 | Android | compileSdk 34, targetSdk 34, minSdk 29 |
 | 앱 | `com.example.dashpet`, versionCode 1, versionName 1.0 |
